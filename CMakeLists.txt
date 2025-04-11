@@ -37,8 +37,15 @@ include_directories(include)
 # TODO(!): Update name and srcs
 # add_library(example_lib src/example_lib.cc)
 
-# Connected and linked the server to boost
-add_executable(server src/server_main.cc)
+# Connected and linked the server components to Boost
+include_directories(
+    src/server
+)
+add_executable(server 
+    src/server_main.cc
+    src/server/server.cc
+    src/server/session.cc
+)
 target_link_libraries(server Boost::system)
 
 # TODO(!): Update test executable name, srcs, and deps
