@@ -13,29 +13,44 @@
 #include <boost/bind/bind.hpp>
 #include <boost/asio.hpp>
 #include "server/server.h"
+#include "config/config_parser.h"
 
 using namespace boost::placeholders;
 
 int main(int argc, char* argv[])
 {
-  try
-  {
-    if (argc != 2)
-    {
-      std::cerr << "Usage: async_tcp_echo_server <port>\n";
-      return 1;
-    }
-
-    boost::asio::io_service io_service;
-
-    using namespace std; // For atoi.
-    server s(io_service, atoi(argv[1]));
-
-    io_service.run();
+  if (argc != 2) {
+    std::cerr << "Usage: webserver <port>\n";
+    return 1;
   }
-  catch (std::exception& e)
-  {
+  // Parse the config file
+  NginxConfigParser config_parser;
+  NginxConfig config;
+  if (!config_parser.Parse(argv[1], &config)){
+    std::cerr << "Failed to parse config file.\n";
+    return 1;
+  }
+  // Find the 'listen' directive
+  int port = 0;
+  for (const auto& statement : config.statements_) {
+    if (statement->tokens_.size() >= 2 && statement->tokens_[0] == "listen") {
+      port = std::stoi(statement->tokens_[1]);
+      break;
+    }
+  }
+  // If the port could not be found
+  if (port == 0) {
+    std::cerr << "Error: No valid 'listen <port>;' found in config.\n";
+    return 1;
+  }
+
+  try {
+    boost::asio::io_service io_service;
+    server s(io_service, port);
+    io_service.run();
+  } catch (std::exception& e) {
     std::cerr << "Exception: " << e.what() << "\n";
+    return 1;
   }
 
   return 0;

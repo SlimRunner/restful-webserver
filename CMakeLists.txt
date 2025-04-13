@@ -34,27 +34,48 @@ message(STATUS "Boost version: ${Boost_VERSION}")
 
 include_directories(include)
 
-# TODO(!): Update name and srcs
-# add_library(example_lib src/example_lib.cc)
+# Build the config_parser library from Assignment 1
+add_library(config_parser
+    src/config/config_parser.cc
+)
 
 # Connected and linked the server components to Boost
 include_directories(
     src/server
+    src/config
 )
-add_executable(server 
+add_executable(webserver 
     src/server_main.cc
     src/server/server.cc
     src/server/session.cc
 )
-target_link_libraries(server Boost::system)
+target_link_libraries(webserver Boost::system config_parser)
 
-# TODO(!): Update test executable name, srcs, and deps
-# add_executable(example_lib_test tests/example_lib_test.cc)
-# target_link_libraries(example_lib_test example_lib gtest_main)
+# Adding Unit test for config_parser
+add_executable(config_parser_test
+  src/config/tests/config_parser_test.cc
+)
+target_link_libraries(config_parser_test
+  config_parser
+  gtest_main
+)
 
-# TODO(!): Update with test binary
-# gtest_discover_tests(example_lib_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+# Define macro to access file path from code (for SimpleConfig test)
+target_compile_definitions(config_parser_test PRIVATE
+  TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src/config/tests"
+)
 
-# TODO(!): Update with target/test targets
-# include(cmake/CodeCoverageReportConfig.cmake)
-# generate_coverage_report(TARGETS example_server example_lib TESTS example_lib_test)
+gtest_discover_tests(config_parser_test)
+
+# Adding Unit test for session (echo logic)
+add_executable(session_test
+  src/server/tests/session_test.cc
+  src/server/session.cc
+)
+
+target_link_libraries(session_test
+  Boost::system
+  gtest_main
+)
+
+gtest_discover_tests(session_test)
