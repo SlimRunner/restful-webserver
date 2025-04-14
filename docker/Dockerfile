@@ -1,6 +1,6 @@
 ### Build/test container ###
 # Define builder stage
-FROM tutututu-maxverstappen:base as builder
+FROM tutututu-maxverstappen:base AS builder
 
 # Share work directory
 COPY . /usr/src/project
@@ -14,18 +14,17 @@ RUN ctest --output-on_failure
 
 ### Deploy container ###
 # Define deploy stage
-FROM ubuntu:noble as deploy
+FROM ubuntu:noble AS deploy
 
-# TODO(!): Copy server output binary to "."
-# COPY --from=builder /usr/src/project/build/bin/example_server .
+COPY --from=builder /usr/src/project/build/bin/webserver .
+COPY --from=builder /usr/src/project/configs/server_config.txt .
 
-# TODO(!): Expose some port(s)
-# EXPOSE 80
+# this is purely for metadata, does not actually open a port, but it is
+# good to keep updated for people reading this file
+EXPOSE 8081
 
 # Use ENTRYPOINT to specify the binary name
-# TODO(!): Update with real server name
-# ENTRYPOINT ["./example_server"]
+ENTRYPOINT ["./webserver"]
 
 # Use CMD to specify arguments to ENTRYPOINT
-# TODO(!): Update with real server args
-# CMD [""]
+CMD ["server_config.txt"]
