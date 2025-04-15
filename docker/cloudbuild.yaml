@@ -19,6 +19,7 @@ steps:
 - name: 'gcr.io/cloud-builders/docker'
   args: [
     'build',
+    '--build-arg', 'CONFIG_FILE=cloud_config.txt',
     '-f', 'docker/Dockerfile',
     '-t', 'gcr.io/$PROJECT_ID/tutututu-maxverstappen:latest',
     '.'
