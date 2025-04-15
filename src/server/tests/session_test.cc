@@ -38,7 +38,7 @@ TEST_F(SessionTest, HandlesCompleteHttpRequest) {
 
   // Instead of invoking boost::asio::async_write,
   // let’s assume we have a method that builds the response string
-  std::string actual_response = s->build_response();  // <- You’ll need to expose this
+  std::string actual_response = s->build_response(fake_request);
 
   EXPECT_EQ(actual_response, expected_response);
 
