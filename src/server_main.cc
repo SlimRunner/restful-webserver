@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
     std::cerr << "Usage: webserver <port>\n";
     return 1;
   }
-  // Parse the config file
+  // Parse the config file //
   NginxConfigParser config_parser;
   NginxConfig config;
   if (!config_parser.Parse(argv[1], &config)){
