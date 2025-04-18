@@ -79,3 +79,10 @@ target_link_libraries(session_test
 )
 
 gtest_discover_tests(session_test)
+
+# Add code coverage report
+include(cmake/CodeCoverageReportConfig.cmake)
+generate_coverage_report(
+    TARGETS webserver config_parser session_test
+    TESTS config_parser_test session_test
+)
