@@ -1,10 +1,12 @@
 steps:
+# Pull cached base image if it exists
 - name: 'gcr.io/cloud-builders/docker'
   entrypoint: 'bash'
   args:
   - '-c'
   - |
     docker pull gcr.io/$PROJECT_ID/tutututu-maxverstappen:base || exit 0
+# Rebuild base image (with gcovr added in base.Dockerfile)
 - name: 'gcr.io/cloud-builders/docker'
   args: [
     'build',
@@ -14,14 +16,24 @@ steps:
     '--cache-from', 'gcr.io/$PROJECT_ID/tutututu-maxverstappen:base',
     '.'
   ]
+# Push base image to registry
 - name: 'gcr.io/cloud-builders/docker'
   args: ['push', 'gcr.io/$PROJECT_ID/tutututu-maxverstappen:base']
+# Build main project container
 - name: 'gcr.io/cloud-builders/docker'
   args: [
     'build',
     '--build-arg', 'CONFIG_FILE=cloud_config.txt',
     '-f', 'docker/Dockerfile',
     '-t', 'gcr.io/$PROJECT_ID/tutututu-maxverstappen:latest',
+    '.'
+  ]
+# Run coverage check container
+- name: 'gcr.io/cloud-builders/docker'
+  args: [
+    'build',
+    '-f', 'docker/coverage.Dockerfile',
+    '-t', 'coverage-check',
     '.'
   ]
 images: ['gcr.io/$PROJECT_ID/tutututu-maxverstappen:base', 'gcr.io/$PROJECT_ID/tutututu-maxverstappen:latest']

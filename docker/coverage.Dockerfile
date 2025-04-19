@@ -1,0 +1,18 @@
+# coverage.Dockerfile
+# Define builder stage
+FROM tutututu-maxverstappen:base AS builder
+
+# Copy project source
+COPY . /usr/src/project
+WORKDIR /usr/src/project/build
+
+# Build 
+RUN cmake ..
+RUN make
+
+# generate code coverage reports
+RUN cmake -DCMAKE_BUILD_TYPE=Coverage ..
+RUN make coverage
+
+# Generate coverage summary (prints to logs)
+RUN gcovr -r ..
