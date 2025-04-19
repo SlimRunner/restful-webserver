@@ -64,7 +64,7 @@ function(generate_coverage_report)
         add_custom_command(OUTPUT ${COVERAGE_REPORT_FILE}
             COMMAND ${CMAKE_COMMAND} -E remove_directory "${COVERAGE_REPORT_DIR}"
             COMMAND ${CMAKE_COMMAND} -E make_directory "${COVERAGE_REPORT_DIR}"
-            COMMAND "${GCOVR_PATH}" --html --html-details -s
+            COMMAND "${GCOVR_PATH}" --html --html-details -s 
             -r "${CMAKE_SOURCE_DIR}"
             --object-directory "${CMAKE_BINARY_DIR}"
             -o "${COVERAGE_REPORT_FILE}"

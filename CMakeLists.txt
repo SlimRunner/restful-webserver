@@ -47,10 +47,13 @@ include_directories(
 )
 add_executable(webserver 
     src/server_main.cc
-    src/server/server.cc
-    src/server/session.cc
 )
-target_link_libraries(webserver Boost::system config_parser)
+add_library(server_logic
+  src/server/server.cc
+  src/server/session.cc
+)
+target_link_libraries(webserver Boost::system server_logic config_parser)
+
 
 # Adding Unit test for config_parser
 add_executable(config_parser_test
@@ -71,12 +74,12 @@ gtest_discover_tests(config_parser_test)
 # Adding Unit test for session (echo logic)
 add_executable(session_test
   src/server/tests/session_test.cc
-  src/server/session.cc
 )
 
 target_link_libraries(session_test
   Boost::system
   gtest_main
+  server_logic
 )
 
 gtest_discover_tests(session_test)
@@ -84,13 +87,12 @@ gtest_discover_tests(session_test)
 # Adding Unit test for server (factory + DI)
 add_executable(server_test
   src/server/tests/server_test.cc
-  src/server/server.cc
-  src/server/session.cc
 )
 
 target_link_libraries(server_test
   Boost::system
   gtest_main
+  server_logic
 )
 
 gtest_discover_tests(server_test)
@@ -98,6 +100,6 @@ gtest_discover_tests(server_test)
 # Add code coverage report
 include(cmake/CodeCoverageReportConfig.cmake)
 generate_coverage_report(
-    TARGETS webserver config_parser session_test server_test
+    TARGETS webserver config_parser server_logic
     TESTS config_parser_test session_test server_test
 )

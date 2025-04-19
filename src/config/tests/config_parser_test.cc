@@ -93,3 +93,62 @@ TEST(NginxConfigParserTest, MultipleStatements) {
   EXPECT_EQ(out_config.statements_.size(), 2);
 }
 
+//Testing the toString method
+TEST(NginxConfigToStringTest, BasicToString) {
+  NginxConfigStatement* stmt = new NginxConfigStatement;
+  stmt->tokens_.push_back("listen");
+  stmt->tokens_.push_back("80");
+
+  NginxConfig config;
+  config.statements_.emplace_back(stmt);
+
+  std::string expected = "listen 80;\n";
+  EXPECT_EQ(config.ToString(0), expected);
+}
+
+//toString method with nested blocks
+TEST(NginxConfigToStringTest, ToStringWithChildBlock) {
+  NginxConfigStatement* parent = new NginxConfigStatement;
+  parent->tokens_.push_back("server");
+
+  NginxConfig* child = new NginxConfig;
+  NginxConfigStatement* child_stmt = new NginxConfigStatement;
+  child_stmt->tokens_.push_back("listen");
+  child_stmt->tokens_.push_back("8080");
+  child->statements_.push_back(std::unique_ptr<NginxConfigStatement>(child_stmt));
+  parent->child_block_.reset(child);
+
+  NginxConfig config;
+  config.statements_.emplace_back(parent);
+
+  std::string str = config.ToString(0);
+  EXPECT_NE(str.find("server {"), std::string::npos);
+  EXPECT_NE(str.find("listen 8080;"), std::string::npos);
+}
+
+//Test that the parser correctly handles single-quoted strings with spaces
+TEST(NginxConfigParserTest, HandlesSingleQuotedTokens) {
+  NginxConfigParser parser;
+  NginxConfig out_config;
+
+  std::istringstream config("location '/path with spaces';");
+  EXPECT_TRUE(parser.Parse(&config, &out_config));
+}
+
+//Tests that the parser returns false for unterminated single-quoted strings
+TEST(NginxConfigParserTest, UnterminatedQuoteTriggersError) {
+  NginxConfigParser parser;
+  NginxConfig out_config;
+
+  std::istringstream config("location 'unterminated_path;");
+  EXPECT_FALSE(parser.Parse(&config, &out_config));  // Should return false
+}
+
+// Tests that the parser returns false when given a nonexistent file path
+TEST(NginxConfigParserTest, FileOpenFailureReturnsFalse) {
+  NginxConfigParser parser;
+  NginxConfig out_config;
+
+  EXPECT_FALSE(parser.Parse("nonexistent.conf", &out_config));
+}
+
