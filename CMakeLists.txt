@@ -97,6 +97,21 @@ target_link_libraries(server_test
 
 gtest_discover_tests(server_test)
 
+
+
+# Copy the integration test script to the build directory
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/src/server/tests/integration_test.py 
+     DESTINATION ${CMAKE_BINARY_DIR}
+     FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+
+# Manually add the integration test (To run you can use `ctest -R integration_test`)
+add_test(
+  NAME integration_test
+  COMMAND ${CMAKE_BINARY_DIR}/integration_test.py
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+
+
 # Add code coverage report
 include(cmake/CodeCoverageReportConfig.cmake)
 generate_coverage_report(
