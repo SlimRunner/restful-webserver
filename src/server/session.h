@@ -9,7 +9,10 @@ class session {
 public:
   session(boost::asio::io_service& io_service);
   tcp::socket& socket();
-  void start();
+  //Added a virtual destructor
+  virtual ~session() = default; 
+  //Made the start method virtual so can be overriden in tests
+  virtual void start();
   std::string build_response(const std::string& full_request);
   void set_request(const std::string& req);
 

@@ -46,7 +46,8 @@ int main(int argc, char* argv[])
 
   try {
     boost::asio::io_service io_service;
-    server s(io_service, port);
+    //Passing a default session factory which is the same as the original but it can be overidden in testing
+    server s(io_service, port, [](auto& io) { return new session(io); });
     io_service.run();
   } catch (std::exception& e) {
     std::cerr << "Exception: " << e.what() << "\n";
