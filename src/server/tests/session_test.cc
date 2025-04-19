@@ -299,7 +299,7 @@ TEST_F(SessionTest, HandleWriteSuccessContinuesReading) {
 
   // Simulate a successful write (no error)
   boost::system::error_code success;
-  s->handle_write(success);  // ✅ hits `if (!error)` path
+  s->handle_write(success); 
 
   delete s;
 }
@@ -310,7 +310,82 @@ TEST_F(SessionTest, HandleWriteErrorTriggersSafeDelete) {
 
   // Simulate an error
   boost::system::error_code error(1, boost::system::generic_category());
-  s->handle_write(error);  // ✅ hits `else` path, calls safe_delete()
+  s->handle_write(error);
 
 }
+
+//To test start
+TEST_F(SessionTest, StartCallsAsyncRead) {
+  boost::asio::io_service io;
+  TestableSession s(io);
+
+  // This won't do a real async read, but will mark start() as covered
+  // If anything breaks, it means our wiring or socket setup is invalid
+  s.start();
+}
+
+//Testing Handle read with complete request
+TEST_F(SessionTest, HandleReadProcessesValidRequest) {
+  boost::asio::io_service io;
+  TestableSession* s = new TestableSession(io);
+
+  std::string full_req =
+    "GET /test HTTP/1.1\r\n"
+    "Host: localhost\r\n"
+    "Connection: close\r\n"
+    "\r\n";
+
+  memcpy(s->raw_data_buffer(), full_req.c_str(), full_req.size());
+  s->handle_read(boost::system::error_code(), full_req.size());
+
+  delete s;
+}
+
+//Testing Handle Read without the GET Method
+TEST_F(SessionTest, HandleReadHandlesNonGETMethod) {
+  boost::asio::io_service io;
+  TestableSession* s = new TestableSession(io);
+
+  std::string bad_method =
+    "POST /upload HTTP/1.1\r\n"
+    "Host: localhost\r\n"
+    "\r\n";
+
+  memcpy(s->raw_data_buffer(), bad_method.c_str(), bad_method.size());
+  s->handle_read(boost::system::error_code(), bad_method.size());
+
+  delete s;
+}
+
+//This is to test the while loop within session.cc
+//This tests the async function of both to make sure both can be responded without crashing early
+TEST_F(SessionTest, HandleReadProcessesTwoPipelinedRequests) {
+  boost::asio::io_service io;
+  TestableSession* s = new TestableSession(io);
+
+  std::string two_requests =
+    "GET /first HTTP/1.1\r\n"
+    "Host: localhost\r\n"
+    "\r\n"
+    "GET /second HTTP/1.1\r\n"
+    "Host: localhost\r\n"
+    "\r\n";
+
+  memcpy(s->raw_data_buffer(), two_requests.c_str(), two_requests.size());
+  s->handle_read(boost::system::error_code(), two_requests.size());
+
+  delete s;
+}
+
+//This test erros out during read
+TEST_F(SessionTest, HandleReadWithErrorTriggersSafeDelete) {
+  boost::asio::io_service io;
+  TestableSession* s = new TestableSession(io);
+
+  boost::system::error_code error(1, boost::system::generic_category());
+  s->handle_read(error, 0);
+
+}
+
+
 
