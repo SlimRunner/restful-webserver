@@ -188,3 +188,51 @@ TEST(ConfigParserBranchCoverage, HandlesEmptyInputAsStartToken) {
   std::istringstream config("");
   EXPECT_TRUE(parser.Parse(&config, &out_config));
 }
+
+//Testing constructor
+TEST(NginxConfigParserTest, ConstructorInitializesParser) {
+  NginxConfigParser parser;
+  SUCCEED();  // No crash means success
+}
+
+// Tests that the parser fails gracefully on an unclosed double-quoted string
+TEST(ConfigParserTest, UnclosedDoubleQuote) {
+  std::istringstream config_stream("\"unclosed_token;");
+  NginxConfigParser parser;
+  NginxConfig out_config;
+
+  EXPECT_FALSE(parser.Parse(&config_stream, &out_config));
+}
+
+// Tests that the parser fails when the first token is an unexpected standalone semicolon
+TEST(ConfigParserTest, UnknownStartToken) {
+  std::istringstream config_stream(";");
+  NginxConfigParser parser;
+  NginxConfig out_config;
+
+  EXPECT_FALSE(parser.Parse(&config_stream, &out_config));
+}
+
+// Tests that the parser fails when there is an unmatched closing block brace
+TEST(ConfigParserTest, ExtraEndBlock) {
+  std::istringstream config_stream("foo bar; }");
+  NginxConfigParser parser;
+  NginxConfig out_config;
+
+  EXPECT_FALSE(parser.Parse(&config_stream, &out_config));
+}
+
+// Tests that ToString correctly indents nested block content when depth > 0
+TEST(ConfigParserTest, ToStringNestedBlockIndentation) {
+  std::istringstream config_stream("server { listen 80; }");
+  NginxConfigParser parser;
+  NginxConfig out_config;
+
+  ASSERT_TRUE(parser.Parse(&config_stream, &out_config));
+  std::string output = out_config.ToString(1);  // depth > 0 to test indentation
+
+  EXPECT_NE(output.find("  listen 80;"), std::string::npos);  // 2-space indent
+}
+
+
+

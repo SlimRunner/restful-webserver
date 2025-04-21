@@ -69,6 +69,8 @@ function(generate_coverage_report)
             --object-directory "${CMAKE_BINARY_DIR}"
             -o "${COVERAGE_REPORT_FILE}"
             --exclude ".*server_main\\.cc"
+            --exclude-throw-branches 
+            --exclude-unreachable-branches
             DEPENDS ${COVERAGE_DATA_STAMP_FILE}
             COMMENT "Generating coverage report"
             VERBATIM)
