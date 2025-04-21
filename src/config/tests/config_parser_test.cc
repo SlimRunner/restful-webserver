@@ -152,3 +152,39 @@ TEST(NginxConfigParserTest, FileOpenFailureReturnsFalse) {
   EXPECT_FALSE(parser.Parse("nonexistent.conf", &out_config));
 }
 
+// Tests that TOKEN_TYPE_START maps correctly to its string representation
+TEST(TokenTypeAsStringTest, HandlesTokenTypeStart) {
+  EXPECT_STREQ("TOKEN_TYPE_START",
+    NginxConfigParser::TokenTypeAsString(NginxConfigParser::TOKEN_TYPE_START));
+}
+
+// Tests that an unknown/invalid TokenType maps to the fallback string
+TEST(TokenTypeAsStringTest, HandlesUnknownTokenType) {
+  auto invalid = static_cast<NginxConfigParser::TokenType>(999);
+  EXPECT_STREQ("Unknown token type",
+    NginxConfigParser::TokenTypeAsString(invalid));
+}
+
+TEST(ConfigParserBranchCoverage, HandlesSemicolonInNormalContext) {
+  NginxConfigParser parser;
+  NginxConfig out_config;
+  std::istringstream config("foo;bar;");
+  EXPECT_TRUE(parser.Parse(&config, &out_config));
+}
+
+// Exercises the right brace path (c == '}') in TOKEN_STATE_TOKEN_TYPE_NORMAL
+// This hits the branch where a closing brace appears while parsing a normal token
+TEST(ConfigParserBranchCoverage, HandlesRightBraceInNormalContext) {
+  NginxConfigParser parser;
+  NginxConfig out_config;
+  std::istringstream config("foo }");
+  EXPECT_FALSE(parser.Parse(&config, &out_config)); // should fail but hit }
+}
+
+// Triggers TOKEN_TYPE_START and hits the 'if (token_type == ...)' branch
+TEST(ConfigParserBranchCoverage, HandlesEmptyInputAsStartToken) {
+  NginxConfigParser parser;
+  NginxConfig out_config;
+  std::istringstream config("");
+  EXPECT_TRUE(parser.Parse(&config, &out_config));
+}

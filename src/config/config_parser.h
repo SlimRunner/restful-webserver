@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include "gtest/gtest_prod.h"
 
 class NginxConfig;
 
@@ -44,7 +45,7 @@ class NginxConfigParser {
     TOKEN_TYPE_EOF = 6,
     TOKEN_TYPE_ERROR = 7
   };
-  const char* TokenTypeAsString(TokenType type);
+  static const char* TokenTypeAsString(TokenType type);
 
   enum TokenParserState {
     TOKEN_STATE_INITIAL_WHITESPACE = 0,
@@ -55,4 +56,8 @@ class NginxConfigParser {
   };
 
   TokenType ParseToken(std::istream* input, std::string* value);
+
+
+  FRIEND_TEST(TokenTypeAsStringTest, HandlesTokenTypeStart);
+  FRIEND_TEST(TokenTypeAsStringTest, HandlesUnknownTokenType);
 };
