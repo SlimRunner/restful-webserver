@@ -3,40 +3,44 @@
 
 std::string HttpResponse::ToString() const
 {
-    std::stringstream ss;
+    std::string headers_str;
 
     // Status line
-    ss << "HTTP/1.1 ";
+    headers_str += "HTTP/1.1 ";
     switch (status)
     {
     case StatusCode::OK:
-        ss << "200 OK";
+        headers_str += "200 OK";
         break;
     case StatusCode::BAD_REQUEST:
-        ss << "400 Bad Request";
+        headers_str += "400 Bad Request";
         break;
     case StatusCode::NOT_FOUND:
-        ss << "404 Not Found";
+        headers_str += "404 Not Found";
         break;
     case StatusCode::INTERNAL_SERVER_ERROR:
-        ss << "500 Internal Server Error";
+        headers_str += "500 Internal Server Error";
         break;
     default:
-        ss << "200 OK"; // Default to 200 OK
+        headers_str += "200 OK"; // Default to 200 OK
     }
-    ss << "\r\n";
+    headers_str += "\r\n";
 
     // Headers
     for (const auto &header : headers)
     {
-        ss << header.first << ": " << header.second << "\r\n";
+        headers_str += header.first + ": " + header.second + "\r\n";
     }
 
     // Empty line separating headers from body
-    ss << "\r\n";
+    headers_str += "\r\n";
 
-    // Body
-    ss << body;
+    // Create the full response by concatenating headers and body
+    // Using string's append to handle binary data properly
+    std::string full_response;
+    full_response.reserve(headers_str.size() + body.size());
+    full_response.append(headers_str);
+    full_response.append(body);
 
-    return ss.str();
+    return full_response;
 }

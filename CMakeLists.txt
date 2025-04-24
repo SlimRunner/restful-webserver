@@ -39,11 +39,19 @@ add_library(config_parser
     src/config/config_parser.cc
 )
 
+# Add request handlers library
+add_library(request_handlers
+  src/server/request_handlers/request_handler.cc
+    src/server/request_handlers/echo_handler.cc
+    src/server/request_handlers/static_file_handler.cc
+)
+
 # Connected and linked the server components to Boost
 include_directories(
     src/server
     src/config
     src/server/tests
+    src/server/request_handlers
 )
 add_executable(webserver 
     src/server_main.cc
@@ -53,8 +61,8 @@ add_library(server_logic
   src/server/server.cc
   src/server/session.cc
 )
-target_link_libraries(webserver Boost::system server_logic config_parser)
-
+target_link_libraries(webserver Boost::system server_logic config_parser request_handlers)
+target_link_libraries(server_logic request_handlers)
 
 # Adding Unit test for config_parser
 add_executable(config_parser_test
@@ -81,6 +89,7 @@ target_link_libraries(session_test
   Boost::system
   gtest_main
   server_logic
+  request_handlers
 )
 
 gtest_discover_tests(session_test)
@@ -94,10 +103,10 @@ target_link_libraries(server_test
   Boost::system
   gtest_main
   server_logic
+  request_handlers
 )
 
 gtest_discover_tests(server_test)
-
 
 
 # Copy the integration test script to the build directory
@@ -116,6 +125,6 @@ add_test(
 # Add code coverage report
 include(cmake/CodeCoverageReportConfig.cmake)
 generate_coverage_report(
-    TARGETS webserver config_parser server_logic
+    TARGETS webserver config_parser server_logic request_handlers
     TESTS config_parser_test session_test server_test
 )

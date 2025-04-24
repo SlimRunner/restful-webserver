@@ -3,3 +3,13 @@
 build
 build_*
 mirror
+
+# static files that may take too much space
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.svg
+*.pdf
+*.zip
+*.ico

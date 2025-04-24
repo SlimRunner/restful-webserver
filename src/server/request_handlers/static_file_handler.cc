@@ -1,8 +1,10 @@
-#include "static_file_handler.h"
+
 #include <fstream>
 #include <sstream>
 #include <iostream>
 #include <filesystem>
+#include <vector>
+#include "static_file_handler.h"
 
 // Initialize static mime_types_ map
 std::map<std::string, std::string> StaticFileHandler::mime_types_ = {
@@ -44,6 +46,23 @@ HttpResponse StaticFileHandler::HandleRequest(const HttpRequest &request)
     // Concatenate base directory with relative path to get absolute path
     std::string file_path = base_dir_ + relative_path;
 
+    // std::cout << "Serving file: " << file_path << std::endl;
+
+    // Check if file exists before trying to read it
+    if (!std::filesystem::exists(file_path))
+    {
+        std::cerr << "File not found: " << file_path << std::endl;
+        response.status = StatusCode::NOT_FOUND;
+        response.body = "404 Not Found";
+        response.headers["Content-Type"] = "text/plain";
+        response.headers["Content-Length"] = std::to_string(response.body.size());
+        return response;
+    }
+
+    // Get file size for logging
+    std::uintmax_t file_size = std::filesystem::file_size(file_path);
+    // std::cout << "File size: " << file_size << " bytes" << std::endl;
+
     // Read the file
     bool success = false;
     std::string file_content = ReadFile(file_path, success);
@@ -54,9 +73,35 @@ HttpResponse StaticFileHandler::HandleRequest(const HttpRequest &request)
         response.body = file_content;
         response.headers["Content-Type"] = GetMimeType(file_path);
         response.headers["Content-Length"] = std::to_string(file_content.size());
+
+        // For zip files, add Content-Disposition header to help with downloads
+        std::string mime_type = GetMimeType(file_path);
+        if (mime_type == "application/pdf")
+        {
+            // Extract filename from the path
+            size_t last_slash = file_path.find_last_of("/");
+            std::string filename = (last_slash != std::string::npos) ? file_path.substr(last_slash + 1) : file_path;
+            response.headers["Content-Disposition"] = "attachment; filename=\"" + filename + "\"";
+
+            // Add cache control headers to prevent caching issues
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+            response.headers["Pragma"] = "no-cache";
+            response.headers["Expires"] = "0";
+        }
+        else if (mime_type == "application/zip")
+        {
+            // Extract filename from the path
+            size_t last_slash = file_path.find_last_of('/');
+            std::string filename = (last_slash != std::string::npos) ? file_path.substr(last_slash + 1) : file_path;
+
+            response.headers["Content-Disposition"] = "attachment; filename=\"" + filename + "\"";
+        }
+
+        // std::cout << "Successfully loaded file with size: " << file_content.size() << " bytes" << std::endl;
     }
     else
     {
+        std::cerr << "Failed to read file: " << file_path << std::endl;
         response.status = StatusCode::NOT_FOUND;
         response.body = "404 Not Found";
         response.headers["Content-Type"] = "text/plain";
@@ -93,16 +138,40 @@ std::string StaticFileHandler::GetMimeType(const std::string &file_path) const
 
 std::string StaticFileHandler::ReadFile(const std::string &file_path, bool &success) const
 {
-    std::ifstream file(file_path, std::ios::binary);
+    // Open file in binary mode
+    std::ifstream file(file_path, std::ios::binary | std::ios::ate);
     if (!file.is_open())
     {
         success = false;
         return "";
     }
 
-    // Read file content
-    std::ostringstream content;
-    content << file.rdbuf();
+    // Get file size by seeking to the end before reaing
+    std::streamsize size = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    // Check if file is too large to handle all at once
+    const std::streamsize max_safe_size = 100 * 1024 * 1024; // 100MB
+    if (size > max_safe_size)
+    {
+        std::cerr << "File too large: " << file_path << " (" << size << " bytes)" << std::endl;
+        success = false;
+        return "";
+    }
+
+    // Use a vector as a buffer for binary data
+    std::vector<char> buffer(size);
+    if (!file.read(buffer.data(), size))
+    {
+        std::cerr << "Error reading file: " << file_path << std::endl;
+        std::cerr << "Error: Attempted to read " << size << " bytes." << std::endl;
+        std::cerr << "Error Actually read: " << file.gcount() << " bytes." << std::endl;
+        success = false;
+        return "";
+    }
+
     success = true;
-    return content.str();
+
+    // Convert to string - this works for both text and binary files
+    return std::string(buffer.data(), size);
 }

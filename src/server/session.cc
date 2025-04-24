@@ -2,124 +2,205 @@
 #include <boost/bind/bind.hpp>
 #include <sstream>
 #include <string>
+#include <iostream>
+
 using namespace boost::placeholders;
 
-session::session(boost::asio::io_service& io_service)
-  //adding already_deleted_ member to constructor 
-  : socket_(io_service), already_deleted_(false) {} 
+session::session(boost::asio::io_service &io_service, std::vector<std::shared_ptr<RequestHandler>> handlers)
+    // adding already_deleted_ member to constructor
+    : socket_(io_service), handlers_(handlers), already_deleted_(false)
+{
+}
 
-tcp::socket& session::socket() {
+tcp::socket &session::socket()
+{
   return socket_;
 }
 
-void session::start() {
+void session::start()
+{
   socket_.async_read_some(boost::asio::buffer(data_, max_length),
-    boost::bind(&session::handle_read, this,
-      boost::asio::placeholders::error,
-      boost::asio::placeholders::bytes_transferred));
+                          boost::bind(&session::handle_read, this,
+                                      boost::asio::placeholders::error,
+                                      boost::asio::placeholders::bytes_transferred));
 }
 
-// Helper function to construct the request's response
-// Since the server can handle partial requests and build_response()
-// now depends on each individual full_request, update it to accept a parameter
-std::string session::build_response(const std::string& full_request) {
-  return "HTTP/1.1 200 OK\r\n"
-         "Content-Type: text/plain\r\n"
-         "Content-Length: " + std::to_string(full_request.size()) + "\r\n"
-         "\r\n" + full_request;
-}
 // Helper function to set the request member. Used for testing.
-void session::set_request(const std::string& req) {
+void session::set_request(const std::string &req)
+{
   request_buffer_ = req;
 }
 
 // Helper function to prevent freeing the same memory twice
 // as deletion is done in handle_read and handle_write methods
-void session::safe_delete() {
-  if (!already_deleted_) {
+void session::safe_delete()
+{
+  if (!already_deleted_)
+  {
     already_deleted_ = true;
     delete this;
   }
 }
 
-void session::handle_read(const boost::system::error_code& error, size_t bytes_transferred) {
-  if (error) {
+HttpRequest session::ParseRequest(const std::string &request_str)
+{
+  HttpRequest request;
+  std::istringstream stream(request_str);
+
+  // Parse request line
+  stream >> request.method >> request.path >> request.version;
+
+  // Parse headers
+  std::string line;
+  std::getline(stream, line); // Consume the rest of the first line
+
+  while (std::getline(stream, line) && line != "\r")
+  {
+    size_t colon_pos = line.find(':');
+    if (colon_pos != std::string::npos)
+    {
+      std::string header_name = line.substr(0, colon_pos);
+      std::string header_value = line.substr(colon_pos + 1);
+
+      // Trim whitespace
+      while (!header_value.empty() && (header_value[0] == ' ' || header_value[0] == '\t'))
+        header_value.erase(0, 1);
+
+      // Remove trailing \r if present
+      if (!header_value.empty() && header_value[header_value.length() - 1] == '\r')
+        header_value.erase(header_value.length() - 1);
+
+      request.headers[header_name] = header_value;
+    }
+  }
+
+  // Parse body (if any)
+  std::stringstream body_stream;
+  body_stream << stream.rdbuf();
+  request.body = body_stream.str();
+
+  return request;
+}
+
+void session::handle_read(const boost::system::error_code &error, size_t bytes_transferred)
+{
+  if (error)
+  {
     safe_delete(); // to avoid Double Free Error
     return;
   }
   // Before appending, check if it will exceed a defined maximum buffer size
   // buffer size limit defined in session.h, currently 8192 bytes = 8 KB
-  if (request_buffer_.size() + bytes_transferred > max_request_size_) {
+  if (request_buffer_.size() + bytes_transferred > max_request_size_)
+  {
     std::string error_response =
-      "HTTP/1.1 413 Payload Too Large\r\n"
-      "Content-Length: 0\r\n"
-      "Connection: close\r\n"
-      "\r\n";
+        "HTTP/1.1 413 Payload Too Large\r\n"
+        "Content-Length: 0\r\n"
+        "Connection: close\r\n"
+        "\r\n";
 
+    current_response_ = error_response; // Store the response for logging
     boost::asio::async_write(socket_,
-      boost::asio::buffer(error_response),
-      boost::bind(&session::handle_write, this, _1));
+                             boost::asio::buffer(error_response),
+                             boost::bind(&session::handle_write, this, _1));
 
     return;
   }
   // Accumulate data in request_buffer_
   request_buffer_ += std::string(data_, bytes_transferred);
 
-  while (true) {
+  while (true)
+  {
     size_t header_end = request_buffer_.find("\r\n\r\n");
-    if (header_end == std::string::npos) {
-      break;  // wait for complete request
+    if (header_end == std::string::npos)
+    {
+      break; // wait for complete request
     }
 
     // Extract one full request
     std::string full_request = request_buffer_.substr(0, header_end + 4);
-    request_buffer_ = request_buffer_.substr(header_end + 4);  // keep remainder
+    request_buffer_ = request_buffer_.substr(header_end + 4); // keep remainder
 
-    // Parse method line
-    std::istringstream stream(full_request);
-    std::string method, path, version;
-    stream >> method >> path >> version;
+    // Parse the HTTP request
 
-    std::string response;
-    bool close_connection = full_request.find("Connection: close") != std::string::npos;
+    HttpRequest request = ParseRequest(full_request);
 
-    if (method != "GET") {
-      response =
-        "HTTP/1.1 400 Bad Request\r\n"
-        "Content-Length: 0\r\n"
-        "Content-Type: text/plain\r\n"
-        + std::string(close_connection ? "Connection: close\r\n" : "") +
-        "\r\n";
-    } else {
-      std::string response_body = full_request;
-      response = build_response(full_request);
-      if (close_connection) {
-        response.insert(response.find("\r\n\r\n"), "\r\nConnection: close");
+    // Find the appropriate handler for the request path
+    bool handled = false;
+    HttpResponse response;
+
+    for (auto &handler : handlers_)
+    {
+      if (handler->CanHandle(request.path))
+      {
+        response = handler->HandleRequest(request);
+        handled = true;
+        break;
       }
     }
 
-    boost::asio::async_write(socket_,
-      boost::asio::buffer(response),
-      boost::bind(&session::handle_write, this, _1));
+    // If no handler was found, return a 404 Not Found response
+    if (!handled)
+    {
+      response.status = StatusCode::NOT_FOUND;
+      response.body = "404 Not Found";
+      response.headers["Content-Type"] = "text/plain";
+      response.headers["Content-Length"] = std::to_string(response.body.size());
+    }
 
-    if (close_connection) {
+    // Check if the connection should be closed
+    bool close_connection = (request.headers.find("Connection") != request.headers.end() &&
+                             request.headers["Connection"] == "close");
+
+    if (close_connection)
+    {
+      response.headers["Connection"] = "close";
+    }
+    else
+    {
+      response.headers["Connection"] = "keep-alive";
+    }
+
+    // Convert response to string and store it in the member variable
+    current_response_ = response.ToString();
+
+    boost::asio::async_write(socket_,
+                             boost::asio::buffer(current_response_),
+                             boost::bind(&session::handle_write, this, _1));
+
+    if (close_connection)
+    {
       return; // Don't read anymore
     }
   }
 
   // Continue reading for more requests
   socket_.async_read_some(boost::asio::buffer(data_, max_length),
-    boost::bind(&session::handle_read, this, _1, _2));
+                          boost::bind(&session::handle_read, this, _1, _2));
 }
 
-void session::handle_write(const boost::system::error_code& error) {
-  if (!error) {
-    socket_.async_read_some(boost::asio::buffer(data_, max_length),
-      boost::bind(&session::handle_read, this,
-        boost::asio::placeholders::error,
-        boost::asio::placeholders::bytes_transferred));
+void session::handle_write(const boost::system::error_code &error)
+{
+  if (error)
+  {
+    std::cerr << "Write error: " << error.message() << std::endl;
+    safe_delete();
+    return;
   }
-  else {
-    safe_delete(); // to avoid Double Free Error
+
+  // Log successful write for debugging
+  // std::cout << "Response sent successfully" << std::endl;
+
+  // Continue reading for more requests (only if we're expecting more)
+  if (!socket_.is_open())
+  {
+    std::cout << "Socket closed after write" << std::endl;
+    safe_delete();
+    return;
   }
+
+  socket_.async_read_some(boost::asio::buffer(data_, max_length),
+                          boost::bind(&session::handle_read, this,
+                                      boost::asio::placeholders::error,
+                                      boost::asio::placeholders::bytes_transferred));
 }

@@ -1,1 +1,12 @@
 listen 8081;
+
+# Echo handler for /echo path 
+/echo {
+    handler EchoHandler;
+}
+
+# Static file handler for /static path
+/static {
+    handler StaticHandler;
+    root ./static;
+}
