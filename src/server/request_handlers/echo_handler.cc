@@ -7,6 +7,17 @@ EchoHandler::EchoHandler(const std::string &path_prefix)
 HttpResponse EchoHandler::HandleRequest(const HttpRequest &request)
 {
     HttpResponse response;
+
+    // Check if the request method is valid (GET)
+    if (request.method != "GET")
+    {
+        response.status = StatusCode::BAD_REQUEST;
+        response.body = "";
+        response.headers["Content-Type"] = "text/plain";
+        response.headers["Content-Length"] = "0";
+        return response;
+    }
+
     response.status = StatusCode::OK;
 
     // Reconstruct the full request for echoing

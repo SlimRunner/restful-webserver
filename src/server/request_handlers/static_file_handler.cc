@@ -30,6 +30,17 @@ HttpResponse StaticFileHandler::HandleRequest(const HttpRequest &request)
 {
     HttpResponse response;
 
+    // Check if the request method is GET
+    if (request.method != "GET")
+    {
+        // Return 400 Bad Request for non-GET methods
+        response.status = StatusCode::BAD_REQUEST;
+        response.body = "";
+        response.headers["Content-Type"] = "text/plain";
+        response.headers["Content-Length"] = "0";
+        return response;
+    }
+
     // Get the file path relative to the base directory
     std::string relative_path;
     if (request.path.size() > path_prefix_.size())
@@ -45,6 +56,17 @@ HttpResponse StaticFileHandler::HandleRequest(const HttpRequest &request)
 
     // Concatenate base directory with relative path to get absolute path
     std::string file_path = base_dir_ + relative_path;
+
+    // Security check - verify the path doesn't escape the base directory
+    if (!IsPathSafe(file_path))
+    {
+        std::cerr << "Security warning: Attempted path traversal attack: " << file_path << std::endl;
+        response.status = StatusCode::FORBIDDEN;
+        response.body = "403 Forbidden";
+        response.headers["Content-Type"] = "text/plain";
+        response.headers["Content-Length"] = std::to_string(response.body.size());
+        return response;
+    }
 
     // std::cout << "Serving file: " << file_path << std::endl;
 
@@ -114,6 +136,21 @@ HttpResponse StaticFileHandler::HandleRequest(const HttpRequest &request)
 bool StaticFileHandler::CanHandle(const std::string &path) const
 {
     return path.substr(0, path_prefix_.size()) == path_prefix_;
+}
+
+bool StaticFileHandler::IsPathSafe(const std::string &path) const
+{
+    // Convert both paths to absolute, normalized paths
+    std::filesystem::path abs_base_dir = std::filesystem::absolute(base_dir_);
+    std::filesystem::path abs_requested_path = std::filesystem::absolute(path);
+
+    // Convert to strings for comparison
+    std::string norm_base_dir = abs_base_dir.string();
+    std::string norm_requested_path = abs_requested_path.string();
+
+    // Check if the normalized requested path starts with the normalized base directory
+    // This ensures the requested path is within the base directory
+    return norm_requested_path.substr(0, norm_base_dir.size()) == norm_base_dir;
 }
 
 std::string StaticFileHandler::GetMimeType(const std::string &file_path) const

@@ -15,6 +15,9 @@ std::string HttpResponse::ToString() const
     case StatusCode::BAD_REQUEST:
         headers_str += "400 Bad Request";
         break;
+    case StatusCode::FORBIDDEN:
+        headers_str += "403 Forbidden";
+        break;
     case StatusCode::NOT_FOUND:
         headers_str += "404 Not Found";
         break;
@@ -22,7 +25,7 @@ std::string HttpResponse::ToString() const
         headers_str += "500 Internal Server Error";
         break;
     default:
-        headers_str += "200 OK"; // Default to 200 OK
+        headers_str += "500 Internal Server Error";
     }
     headers_str += "\r\n";
 

@@ -25,6 +25,9 @@ private:
 
   // Read a file from the filesystem
   std::string ReadFile(const std::string &file_path, bool &success) const;
+
+  // Check if a path is safe (doesn't escape the base directory)
+  bool IsPathSafe(const std::string &path) const;
 };
 
 #endif // STATIC_FILE_HANDLER_H
