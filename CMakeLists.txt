@@ -29,7 +29,16 @@ add_subdirectory(/usr/src/googletest googletest)
 # Enable Boost
 # Use static libraries so binaries can be deployed without a full boost install
 set(Boost_USE_STATIC_LIBS ON)
-find_package(Boost 1.50 REQUIRED COMPONENTS system)
+# Adding log_setup log regex to boost as required components
+find_package(Boost 1.50 REQUIRED COMPONENTS
+  system
+  log_setup
+  log
+  regex
+  thread
+  filesystem
+  date_time
+)
 message(STATUS "Boost version: ${Boost_VERSION}")
 
 include_directories(include)
@@ -46,12 +55,17 @@ add_library(request_handlers
     src/server/request_handlers/static_file_handler.cc
 )
 
+# Add logger library
+add_library(logger
+  src/util/logger.cc
+)
 # Connected and linked the server components to Boost
 include_directories(
     src/server
     src/config
     src/server/tests
     src/server/request_handlers
+    src/util
 )
 add_executable(webserver 
     src/server_main.cc
@@ -61,8 +75,31 @@ add_library(server_logic
   src/server/server.cc
   src/server/session.cc
 )
-target_link_libraries(webserver Boost::system server_logic config_parser request_handlers)
-target_link_libraries(server_logic request_handlers)
+# Reformating to  fit in screen. Adding 
+target_link_libraries(webserver
+  Boost::system
+  # Adding log_setup and log as dependencies
+  Boost::log_setup
+  Boost::log
+  Boost::regex
+  Boost::thread
+  Boost::filesystem
+  Boost::date_time
+  server_logic
+  config_parser
+  request_handlers
+  logger
+)
+target_link_libraries(server_logic
+  request_handlers
+  logger
+  Boost::log_setup
+  Boost::log
+  Boost::regex
+  Boost::thread
+  Boost::filesystem
+  Boost::date_time
+)
 
 # Adding Unit test for config_parser
 add_executable(config_parser_test
@@ -71,6 +108,7 @@ add_executable(config_parser_test
 target_link_libraries(config_parser_test
   config_parser
   gtest_main
+  logger
 )
 
 # Define macro to access file path from code (for SimpleConfig test)

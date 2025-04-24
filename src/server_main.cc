@@ -19,11 +19,16 @@
 #include "server/request_handlers/request_handler.h"
 #include "server/request_handlers/static_file_handler.h"
 #include "server/request_handlers/echo_handler.h"
+#include "logger.h"
+#include <boost/log/trivial.hpp>
 
 using namespace boost::placeholders;
 
 int main(int argc, char *argv[])
 {
+  // Initialize logging
+  init_logging();
+  BOOST_LOG_TRIVIAL(info) << "Server starting...";
   if (argc != 2)
   {
     std::cerr << "Usage: webserver <port>\n";
