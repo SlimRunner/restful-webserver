@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <vector>
 #include "static_file_handler.h"
+#include <boost/log/trivial.hpp>
 
 // Initialize static mime_types_ map
 std::map<std::string, std::string> StaticFileHandler::mime_types_ = {
@@ -33,6 +34,7 @@ HttpResponse StaticFileHandler::HandleRequest(const HttpRequest &request)
     // Check if the request method is GET
     if (request.method != "GET")
     {
+        BOOST_LOG_TRIVIAL(warning) << "StaticFileHandler rejected non-GET request: " << request.method;
         // Return 400 Bad Request for non-GET methods
         response.status = StatusCode::BAD_REQUEST;
         response.body = "";
@@ -60,7 +62,7 @@ HttpResponse StaticFileHandler::HandleRequest(const HttpRequest &request)
     // Security check - verify the path doesn't escape the base directory
     if (!IsPathSafe(file_path))
     {
-        std::cerr << "Security warning: Attempted path traversal attack: " << file_path << std::endl;
+        BOOST_LOG_TRIVIAL(warning) << "Security warning: Attempted path traversal attack: " << file_path;
         response.status = StatusCode::FORBIDDEN;
         response.body = "403 Forbidden";
         response.headers["Content-Type"] = "text/plain";
@@ -73,7 +75,7 @@ HttpResponse StaticFileHandler::HandleRequest(const HttpRequest &request)
     // Check if file exists before trying to read it
     if (!std::filesystem::exists(file_path))
     {
-        std::cerr << "File not found: " << file_path << std::endl;
+        BOOST_LOG_TRIVIAL(warning) << "Requested file not found: " << file_path;
         response.status = StatusCode::NOT_FOUND;
         response.body = "404 Not Found";
         response.headers["Content-Type"] = "text/plain";
@@ -119,11 +121,13 @@ HttpResponse StaticFileHandler::HandleRequest(const HttpRequest &request)
             response.headers["Content-Disposition"] = "attachment; filename=\"" + filename + "\"";
         }
 
-        // std::cout << "Successfully loaded file with size: " << file_content.size() << " bytes" << std::endl;
+        BOOST_LOG_TRIVIAL(info) << "Served file: " << file_path
+                        << " (" << file_content.size() << " bytes)"
+                        << " as " << GetMimeType(file_path);
     }
     else
     {
-        std::cerr << "Failed to read file: " << file_path << std::endl;
+        BOOST_LOG_TRIVIAL(error) << "Failed to read file: " << file_path;
         response.status = StatusCode::NOT_FOUND;
         response.body = "404 Not Found";
         response.headers["Content-Type"] = "text/plain";
@@ -191,7 +195,7 @@ std::string StaticFileHandler::ReadFile(const std::string &file_path, bool &succ
     const std::streamsize max_safe_size = 100 * 1024 * 1024; // 100MB
     if (size > max_safe_size)
     {
-        std::cerr << "File too large: " << file_path << " (" << size << " bytes)" << std::endl;
+        BOOST_LOG_TRIVIAL(warning) << "File too large to serve: " << file_path << " (" << size << " bytes)";
         success = false;
         return "";
     }
@@ -200,9 +204,8 @@ std::string StaticFileHandler::ReadFile(const std::string &file_path, bool &succ
     std::vector<char> buffer(size);
     if (!file.read(buffer.data(), size))
     {
-        std::cerr << "Error reading file: " << file_path << std::endl;
-        std::cerr << "Error: Attempted to read " << size << " bytes." << std::endl;
-        std::cerr << "Error Actually read: " << file.gcount() << " bytes." << std::endl;
+        BOOST_LOG_TRIVIAL(error) << "Error reading file: " << file_path;
+        BOOST_LOG_TRIVIAL(error) << "Expected size: " << size << ", actual read: " << file.gcount();
         success = false;
         return "";
     }

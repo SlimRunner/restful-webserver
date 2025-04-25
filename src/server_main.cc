@@ -31,18 +31,21 @@ int main(int argc, char *argv[])
   BOOST_LOG_TRIVIAL(info) << "Server starting...";
   if (argc != 2)
   {
-    std::cerr << "Usage: webserver <port>\n";
+    BOOST_LOG_TRIVIAL(error) << "Invalid usage: Expected a config file. Usage: webserver <config_file>";
     return 1;
   }
 
-  // Parse the config file //
+  // Parse the config file
   NginxConfigParser config_parser;
   NginxConfig config;
   if (!config_parser.Parse(argv[1], &config))
   {
-    std::cerr << "Failed to parse config file.\n";
+    BOOST_LOG_TRIVIAL(error) << "Failed to parse config file: " << argv[1] <<
+      ". Server shutting down.";
     return 1;
   }
+
+  BOOST_LOG_TRIVIAL(info) << "Config file parsed successfully: " << argv[1];
 
   // Find the 'listen' directive
   int port = 0;
@@ -51,6 +54,7 @@ int main(int argc, char *argv[])
     if (statement->tokens_.size() >= 2 && statement->tokens_[0] == "listen")
     {
       port = std::stoi(statement->tokens_[1]);
+      BOOST_LOG_TRIVIAL(info) << "Port " << port << " found in config.";
       break;
     }
   }
@@ -58,7 +62,7 @@ int main(int argc, char *argv[])
   // If the port could not be found
   if (port == 0)
   {
-    std::cerr << "Error: No valid 'listen <port>;' found in config.\n";
+    BOOST_LOG_TRIVIAL(error) << "No valid 'listen <port>' found in config. Server shutting down.";
     return 1;
   }
 
@@ -94,14 +98,18 @@ int main(int argc, char *argv[])
       if (handler_type == "EchoHandler")
       {
         handlers.push_back(std::make_shared<EchoHandler>(path_prefix));
+        BOOST_LOG_TRIVIAL(info) << "Registered EchoHandler at path: " << path_prefix;
       }
       else if (handler_type == "StaticHandler" && !root_dir.empty())
       {
         handlers.push_back(std::make_shared<StaticFileHandler>(path_prefix, root_dir));
+        BOOST_LOG_TRIVIAL(info) << "Registered StaticFileHandler at path: " <<
+          path_prefix <<", serving from: " << root_dir;
       }
       else
       {
-        std::cerr << "Unknown handler type: " << handler_type << "\n";
+        BOOST_LOG_TRIVIAL(warning) << "Unknown or incomplete handler type: " << 
+          handler_type << " for path: " << path_prefix;
       }
     }
   }
@@ -110,7 +118,7 @@ int main(int argc, char *argv[])
   if (handlers.empty())
   {
     handlers.push_back(std::make_shared<EchoHandler>("/"));
-    std::cout << "No handlers configured. Defaulting to EchoHandler.\n";
+    BOOST_LOG_TRIVIAL(warning) << "No handlers configured. Defaulting to EchoHandler";
   }
 
   try
@@ -121,14 +129,16 @@ int main(int argc, char *argv[])
     server s(io_service, port, handlers,
              [](auto &io, auto handlers)
              { return new session(io, handlers); });
-    std::cout << "Server started on port " << port << "\n";
+    BOOST_LOG_TRIVIAL(info) << "Server started successfully on port " << port;
     io_service.run();
   }
   catch (std::exception &e)
   {
-    std::cerr << "Exception: " << e.what() << "\n";
+    BOOST_LOG_TRIVIAL(error) << "Exception during server runtime: " << e.what();
+    BOOST_LOG_TRIVIAL(error) << "Server shutting down due to exception.";
     return 1;
   }
-
+  
+  BOOST_LOG_TRIVIAL(info) << "Server exited cleanly.";
   return 0;
 }

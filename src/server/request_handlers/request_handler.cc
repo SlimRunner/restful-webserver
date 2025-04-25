@@ -1,5 +1,6 @@
 #include "request_handler.h"
 #include <sstream>
+#include <boost/log/trivial.hpp>
 
 std::string HttpResponse::ToString() const
 {
@@ -44,6 +45,8 @@ std::string HttpResponse::ToString() const
     full_response.reserve(headers_str.size() + body.size());
     full_response.append(headers_str);
     full_response.append(body);
+    BOOST_LOG_TRIVIAL(debug) << "HttpResponse serialized to string with status: " << status
+                             << " and content length: " << body.size();
 
     return full_response;
 }

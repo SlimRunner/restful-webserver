@@ -1,5 +1,6 @@
 #include "echo_handler.h"
 #include <sstream>
+#include <boost/log/trivial.hpp>
 
 EchoHandler::EchoHandler(const std::string &path_prefix)
     : path_prefix_(path_prefix) {}
@@ -11,13 +12,15 @@ HttpResponse EchoHandler::HandleRequest(const HttpRequest &request)
     // Check if the request method is valid (GET)
     if (request.method != "GET")
     {
+        BOOST_LOG_TRIVIAL(warning) << "EchoHandler rejected non-GET request: " << request.method;
         response.status = StatusCode::BAD_REQUEST;
         response.body = "";
         response.headers["Content-Type"] = "text/plain";
         response.headers["Content-Length"] = "0";
         return response;
     }
-
+    BOOST_LOG_TRIVIAL(info) << "EchoHandler handling GET request for path: " << request.path;
+    
     response.status = StatusCode::OK;
 
     // Reconstruct the full request for echoing

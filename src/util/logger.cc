@@ -25,12 +25,14 @@ void init_logging() {
 
   // File sink with rotation
   logging::add_file_log(
-    keywords::file_name = "logs/server_%Y-%m-%d_%H-%M-%S.log",
+    keywords::file_name = "logs/server_%Y-%m-%d.log",
     keywords::rotation_size = 10 * 1024 * 1024, // 10 MB
     // setting the rotation time to midnight
     // Creates a rotation time point of every day at the specified time
     // parameters are (Hour, Minute, Second)
     keywords::time_based_rotation = sinks::file::rotation_at_time_point(0, 0, 0),
+    keywords::auto_flush = true, // flushes every log write. useful in short tests
+    keywords::open_mode = std::ios_base::app, // this ensures append mode
     keywords::format = "[%TimeStamp%] [%ThreadID%] [%Severity%]: %Message%"
   );
 
