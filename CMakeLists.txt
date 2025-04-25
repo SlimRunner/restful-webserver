@@ -118,33 +118,33 @@ target_compile_definitions(config_parser_test PRIVATE
 
 gtest_discover_tests(config_parser_test)
 
-# Adding Unit test for session (echo logic)
-add_executable(session_test
-  src/server/tests/session_test.cc
-)
 
-target_link_libraries(session_test
-  Boost::system
-  gtest_main
-  server_logic
-  request_handlers
-)
-
-gtest_discover_tests(session_test)
-
-# Adding Unit test for server (factory + DI)
-add_executable(server_test
+# only add tests that all share same target_link_libraries
+set(SERVER_TEST_SOURCES
   src/server/tests/server_test.cc
+  src/server/tests/session_test.cc
+  src/server/tests/request_handler_test.cc
+  # Add more test libraries here
 )
 
-target_link_libraries(server_test
-  Boost::system
-  gtest_main
-  server_logic
-  request_handlers
-)
+foreach(test_src ${SERVER_TEST_SOURCES})
+  # NAME_WE removes LONGEST extension
+  # example: asd.qwe.zxc -> asd
+  get_filename_component(test_name ${test_src} NAME_WE)
+  # these are aggregated to be used at the end in coverage report
+  list(APPEND SERVER_TEST_NAMES ${test_name})
 
-gtest_discover_tests(server_test)
+  add_executable(${test_name} ${test_src})
+
+  target_link_libraries(${test_name}
+    Boost::system
+    gtest_main
+    server_logic
+    request_handlers
+  )
+
+  gtest_discover_tests(${test_name})
+endforeach()
 
 
 # Copy the integration test script to the build directory
@@ -164,5 +164,5 @@ add_test(
 include(cmake/CodeCoverageReportConfig.cmake)
 generate_coverage_report(
     TARGETS webserver config_parser server_logic request_handlers
-    TESTS config_parser_test session_test server_test
+    TESTS config_parser_test ${SERVER_TEST_NAMES}
 )
