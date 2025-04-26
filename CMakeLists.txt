@@ -124,6 +124,8 @@ set(SERVER_TEST_SOURCES
   src/server/tests/server_test.cc
   src/server/tests/session_test.cc
   src/server/tests/request_handler_test.cc
+  src/server/tests/echo_handler_test.cc
+  src/server/tests/static_file_handler_test.cc
   # Add more test libraries here
 )
 
@@ -137,8 +139,10 @@ foreach(test_src ${SERVER_TEST_SOURCES})
   add_executable(${test_name} ${test_src})
 
   target_link_libraries(${test_name}
+    Boost::filesystem
     Boost::system
     gtest_main
+    gmock_main
     server_logic
     request_handlers
   )

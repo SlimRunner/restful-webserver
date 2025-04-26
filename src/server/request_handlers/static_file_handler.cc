@@ -145,8 +145,8 @@ bool StaticFileHandler::CanHandle(const std::string &path) const
 bool StaticFileHandler::IsPathSafe(const std::string &path) const
 {
     // Convert both paths to absolute, normalized paths
-    std::filesystem::path abs_base_dir = std::filesystem::absolute(base_dir_);
-    std::filesystem::path abs_requested_path = std::filesystem::absolute(path);
+    std::filesystem::path abs_base_dir = std::filesystem::absolute(base_dir_).lexically_normal();
+    std::filesystem::path abs_requested_path = std::filesystem::absolute(path).lexically_normal();
 
     // Convert to strings for comparison
     std::string norm_base_dir = abs_base_dir.string();

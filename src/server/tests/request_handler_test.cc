@@ -72,17 +72,16 @@ TEST(RequestHandlerPayload, RequestWithHeader) {
   };
 
   HttpResponse httpRes = {StatusCode::OK, headers, ""};
+  // NOTE: the headers are sorted because of the underlying data
+  // structure (map -> balanced tree)
   const std::string header = "HTTP/1.1 200 OK\r\n"
-                             "Content-Type: text/html\r\n"
-                             "Content-Length: 123\r\n"
-                             "Connection: keep-alive\r\n"
                              "Cache-Control: no-cache\r\n"
+                             "Connection: keep-alive\r\n"
+                             "Content-Length: 123\r\n"
+                             "Content-Type: text/html\r\n"
                              "Server: TestServer/1.0\r\n\r\n";
   //--
   std::string res = httpRes.ToString();
 
-  for (const auto& h: headers) {
-    const auto match = h.first + ": " + h.second;
-    EXPECT_NE(res.find(match), std::string::npos);
-  }
+  EXPECT_EQ(res, header);
 }
