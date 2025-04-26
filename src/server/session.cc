@@ -129,10 +129,29 @@ void session::handle_read(const boost::system::error_code &error, size_t bytes_t
 
     HttpRequest request = ParseRequest(full_request);
 
-    try {
+    // Check HTTP version - only accepts HTTP/1.1
+    if (request.version != "HTTP/1.1")
+    {
+      BOOST_LOG_TRIVIAL(warning) << "Unsupported HTTP version: " << request.version;
+      HttpResponse response;
+      response.status = StatusCode::BAD_REQUEST;
+      response.body = "";
+      response.headers["Content-Type"] = "text/plain";
+      response.headers["Content-Length"] = std::to_string(response.body.size());
+      current_response_ = response.ToString();
+      boost::asio::async_write(socket_,
+                               boost::asio::buffer(current_response_),
+                               boost::bind(&session::handle_write, this, _1));
+      return;
+    }
+
+    try
+    {
       std::string client_ip = socket_.remote_endpoint().address().to_string();
       BOOST_LOG_TRIVIAL(info) << "Received " << request.method << " " << request.path << " from " << client_ip;
-    } catch (...) {
+    }
+    catch (...)
+    {
       BOOST_LOG_TRIVIAL(info) << "Received " << request.method << " " << request.path << " from [unknown IP]";
     }
     // Find the appropriate handler for the request path
