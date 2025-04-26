@@ -2,13 +2,12 @@
 #ifndef REQUEST_HANDLER_H
 #define REQUEST_HANDLER_H
 
-#include <string>
 #include <map>
 #include <ostream>
+#include <string>
 
 // HTTP status codes
-enum class StatusCode
-{
+enum class StatusCode {
     OK = 200,
     BAD_REQUEST = 400,
     FORBIDDEN = 403,
@@ -18,8 +17,7 @@ enum class StatusCode
 };
 
 // HTTP request structure
-struct HttpRequest
-{
+struct HttpRequest {
     std::string method;
     std::string path;
     std::string version;
@@ -28,8 +26,7 @@ struct HttpRequest
 };
 
 // HTTP response structure
-struct HttpResponse
-{
+struct HttpResponse {
     StatusCode status;
     std::map<std::string, std::string> headers;
     std::string body;
@@ -38,16 +35,15 @@ struct HttpResponse
 };
 
 // Base request handler interface
-class RequestHandler
-{
-public:
+class RequestHandler {
+   public:
     virtual ~RequestHandler() = default;
 
     // Handle a request and generate a response
-    virtual HttpResponse HandleRequest(const HttpRequest &request) = 0;
+    virtual HttpResponse HandleRequest(const HttpRequest& request) = 0;
 
     // Check if this handler should process the given path
-    virtual bool CanHandle(const std::string &path) const = 0;
+    virtual bool CanHandle(const std::string& path) const = 0;
 };
 
 // Overload the stream insertion operator for StatusCode
@@ -55,13 +51,19 @@ public:
 // such as "200 OK" or "404 Not Found", instead of just the raw enum integer.
 // It's especially useful for Boost.Log or std::cout/debugging purposes.
 inline std::ostream& operator<<(std::ostream& os, StatusCode code) {
-  switch (code) {
-    case StatusCode::OK: return os << "200 OK";
-    case StatusCode::BAD_REQUEST: return os << "400 Bad Request";
-    case StatusCode::FORBIDDEN: return os << "403 Forbidden";
-    case StatusCode::NOT_FOUND: return os << "404 Not Found";
-    case StatusCode::INTERNAL_SERVER_ERROR: return os << "500 Internal Server Error";
-    default: return os << "Unknown Status (" << static_cast<int>(code) << ")";
-  }
+    switch (code) {
+        case StatusCode::OK:
+            return os << "200 OK";
+        case StatusCode::BAD_REQUEST:
+            return os << "400 Bad Request";
+        case StatusCode::FORBIDDEN:
+            return os << "403 Forbidden";
+        case StatusCode::NOT_FOUND:
+            return os << "404 Not Found";
+        case StatusCode::INTERNAL_SERVER_ERROR:
+            return os << "500 Internal Server Error";
+        default:
+            return os << "Unknown Status (" << static_cast<int>(code) << ")";
+    }
 }
-#endif // REQUEST_HANDLER_H
+#endif  // REQUEST_HANDLER_H

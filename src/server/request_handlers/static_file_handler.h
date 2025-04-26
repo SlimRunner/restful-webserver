@@ -1,33 +1,33 @@
 #ifndef STATIC_FILE_HANDLER_H
 #define STATIC_FILE_HANDLER_H
 
-#include "request_handler.h"
 #include <map>
 #include <string>
 
-class StaticFileHandler : public RequestHandler
-{
-public:
-  StaticFileHandler(const std::string &path_prefix, const std::string &base_dir);
+#include "request_handler.h"
 
-  HttpResponse HandleRequest(const HttpRequest &request) override;
-  bool CanHandle(const std::string &path) const override;
+class StaticFileHandler : public RequestHandler {
+   public:
+    StaticFileHandler(const std::string &path_prefix, const std::string &base_dir);
 
-private:
-  std::string path_prefix_;
-  std::string base_dir_;
+    HttpResponse HandleRequest(const HttpRequest &request) override;
+    bool CanHandle(const std::string &path) const override;
 
-  // Map of file extensions to MIME types
-  static std::map<std::string, std::string> mime_types_;
+   private:
+    std::string path_prefix_;
+    std::string base_dir_;
 
-  // Get the MIME type based on file extension
-  std::string GetMimeType(const std::string &file_path) const;
+    // Map of file extensions to MIME types
+    static std::map<std::string, std::string> mime_types_;
 
-  // Read a file from the filesystem
-  std::string ReadFile(const std::string &file_path, bool &success) const;
+    // Get the MIME type based on file extension
+    std::string GetMimeType(const std::string &file_path) const;
 
-  // Check if a path is safe (doesn't escape the base directory)
-  bool IsPathSafe(const std::string &path) const;
+    // Read a file from the filesystem
+    std::string ReadFile(const std::string &file_path, bool &success) const;
+
+    // Check if a path is safe (doesn't escape the base directory)
+    bool IsPathSafe(const std::string &path) const;
 };
 
-#endif // STATIC_FILE_HANDLER_H
+#endif  // STATIC_FILE_HANDLER_H
