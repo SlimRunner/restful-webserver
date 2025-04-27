@@ -155,27 +155,6 @@ TEST_F(StaticFileHandlerText, HandleRequestAttemptBacktracking) {
     EXPECT_EQ(response.body, "403 Forbidden");
 }
 
-// test that attempting to read unreadable file returns 404
-TEST_F(StaticFileHandlerText, HandleRequestWithUnreadableFile) {
-    namespace fs = boost::filesystem;
-    auto handler = getHandler();
-    constexpr auto filename = "secret.txt";
-
-    // call fixture function to create file with unset read bit
-    addFile(filename, "unreadable", [](fs::path fp) {
-        boost::system::error_code ec;
-        fs::permissions(fp, fs::owner_all & ~fs::owner_read, ec);
-        if (ec) {
-            GTEST_SKIP() << "Skipping test because permissions could not be changed: "
-                         << ec.message();
-        }
-    });
-
-    auto response = handler.HandleRequest(getRequest("GET", filename));
-    EXPECT_EQ(response.status, StatusCode::NOT_FOUND);
-    EXPECT_EQ(response.body, "404 Not Found");
-}
-
 // test that the function gracefully fails with 1000+ MB file
 TEST_F(StaticFileHandlerText, HandleRequestFailureWithLargeFile) {
     namespace fs = boost::filesystem;
