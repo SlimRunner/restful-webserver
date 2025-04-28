@@ -59,7 +59,7 @@ HttpResponse StaticFileHandler::HandleRequest(const HttpRequest &request) {
         return response;
     }
 
-    // std::cout << "Serving file: " << file_path << std::endl;
+    BOOST_LOG_TRIVIAL(debug) << "StaticFileHandler handling GET request for path: " << file_path;
 
     // Check if file exists before trying to read it
     if (!std::filesystem::exists(file_path)) {
@@ -73,7 +73,7 @@ HttpResponse StaticFileHandler::HandleRequest(const HttpRequest &request) {
 
     // Get file size for logging
     std::uintmax_t file_size = std::filesystem::file_size(file_path);
-    // std::cout << "File size: " << file_size << " bytes" << std::endl;
+    BOOST_LOG_TRIVIAL(debug) << "File size: " << file_size << " bytes";
 
     // Read the file
     bool success = false;
