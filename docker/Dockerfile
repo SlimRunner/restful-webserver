@@ -24,6 +24,8 @@ ENV CONFIG_FILE=${CONFIG_FILE}
 COPY --from=builder /usr/src/project/build/bin/webserver .
 # NOTE: the config files are renamed inside the container to ./server_config.txt
 COPY --from=builder /usr/src/project/configs/${CONFIG_FILE} ./server_config.txt
+# Copy the static directory
+COPY --from=builder /usr/src/project/static ./static
 
 # this is purely for metadata, does not actually open a port, but it is
 # good to keep updated for people reading this file
