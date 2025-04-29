@@ -64,7 +64,7 @@ HttpResponse StaticFileHandler::HandleRequest(const HttpRequest &request) {
     // Check if file exists before trying to read it
     if (!std::filesystem::exists(file_path)) {
         BOOST_LOG_TRIVIAL(warning) << "Requested file not found: " << file_path;
-        
+
         response.status = StatusCode::NOT_FOUND;
         response.body = "404 Not Found";
         response.headers["Content-Type"] = "text/plain";

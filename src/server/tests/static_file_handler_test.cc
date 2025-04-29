@@ -3,41 +3,24 @@
 #include <boost/filesystem.hpp>
 #include <fstream>
 #include <functional>
-#include <map>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "gtest/gtest.h"
 
 using FileMutator = std::function<void(boost::filesystem::path)>;
+using FileMapRef = std::vector<std::pair<std::string, std::string>>;
 
 // class fixture that creates files and facilitates addition of new ones
-// to provide real files for the test cases. Use sparingly as each test
-// case creates this entire fleet of files.
+// to provide real files for the test cases.
 class StaticFileHandlerText : public ::testing::Test {
    private:
-    std::map<std::string, std::string> files = {
-        {"index.html", "<h1>Hello, world!</h1>"},
-        {"style.css", "* { color: red }"},
-        {"script.js", "application/javascript"},
-        {"image.jpg", "mock of bin data for JPEG"},
-        {"image.jpeg", "mock of bin data for JPEG"},
-        {"image.png", "mock of bin data for PNG"},
-        {"image.gif", "mock of bin data for GIF"},
-        {"image.svg", "<svg fill=\"none\"></svg>"},
-        {"text.txt", "foobar hello world"},
-        {"doc.pdf", "mock of bin data for PDF"},
-        {"arch.zip", "mock of bin data for ZIP"},
-        {"schema.json", "{ a: {b: [1,2,3]}}"},
-        {"schema.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\"?> <a v=\"asd\">text</a>"},
-        {"favicon.ico", "mock of bin data for ICO"},
-        {"extensionless", "file without extension"},
-        {"weird.zzy", "non supported extension"},
-    };
-
-    boost::filesystem::path tempDir;
-    boost::filesystem::path baseDir;
-    const std::string BASE_TAG = "/base";
-    const std::string oobFile = "hackerman.md";
+    boost::filesystem::path tempDir = {};
+    boost::filesystem::path baseDir = {};
+    std::string BASE_TAG = "/base";
+    std::string oobFile = "hackerman.md";
+    FileMapRef _files;
 
    protected:
     void SetUp() override {
@@ -45,11 +28,6 @@ class StaticFileHandlerText : public ::testing::Test {
         tempDir = fs::temp_directory_path() / fs::unique_path();
         baseDir = tempDir / "static";
         fs::create_directories(baseDir);
-
-        for (auto const &file : files) {
-            std::ofstream(baseDir / file.first) << file.second;
-        }
-        std::ofstream(tempDir / oobFile) << "get pwned";
     }
 
     void TearDown() override {
@@ -57,35 +35,68 @@ class StaticFileHandlerText : public ::testing::Test {
         fs::remove_all(tempDir);
     }
 
-    StaticFileHandler getHandler() {
-        return StaticFileHandler(BASE_TAG, baseDir.string());
+    const FileMapRef &getFiles() {
+        return _files;
     }
 
-    HttpRequest getRequest(std::string method, std::string filename) {
+    const FileMapRef &createDefaultFiles() {
+        _files.insert(
+            _files.end(),
+            {
+                {"index.html", "<h1>Hello, world!</h1>"},
+                {"style.css", "* { color: red }"},
+                {"script.js", "application/javascript"},
+                {"image.jpg", "mock of bin data for JPEG"},
+                {"image.jpeg", "mock of bin data for JPEG"},
+                {"image.png", "mock of bin data for PNG"},
+                {"image.gif", "mock of bin data for GIF"},
+                {"image.svg", "<svg fill=\"none\"></svg>"},
+                {"text.txt", "foobar hello world"},
+                {"doc.pdf", "mock of bin data for PDF"},
+                {"arch.zip", "mock of bin data for ZIP"},
+                {"schema.json", "{ a: {b: [1,2,3]}}"},
+                {"schema.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\"?> <a v=\"asd\">text</a>"},
+                {"favicon.ico", "mock of bin data for ICO"},
+                {"extensionless", "file without extension"},
+                {"weird.zzy", "non supported extension"},
+            });
+        for (auto const &file : _files) {
+            std::ofstream(baseDir / file.first) << file.second;
+        }
+        return this->_files;
+    }
+
+    StaticFileHandler getHandler(std::string prefix) {
+        return StaticFileHandler(prefix, baseDir.string());
+    }
+
+    HttpRequest getRequest(std::string method, std::string filepath) {
         HttpRequest request;
         request.version = "HTTP/1.1";
         request.method = method;
-        request.path = BASE_TAG + "/" + filename;
+        request.path = filepath;
         request.headers = {};
         request.body = "";
         return request;
     }
 
-    void addFile(std::string filename, std::string content, FileMutator mutator) {
+    const FileMapRef &addUnreachableFile(std::string filename, std::string content,
+                                         FileMutator mutator) {
+        const auto filepath = tempDir / filename;
+        std::ofstream(filepath) << content;
+        namespace fs = boost::filesystem;
+        mutator(filepath);
+        _files.push_back({filename, content});
+        return this->_files;
+    }
+
+    const FileMapRef &addFile(std::string filename, std::string content, FileMutator mutator) {
         const auto filepath = baseDir / filename;
         std::ofstream(filepath) << content;
         namespace fs = boost::filesystem;
         mutator(filepath);
-    }
-
-    std::string getOutOfBoundsFilename() {
-        // --
-        return oobFile;
-    }
-
-    const std::map<std::string, std::string> &getMockFiles() {
-        // --
-        return files;
+        _files.push_back({filename, content});
+        return this->_files;
     }
 };
 
@@ -116,9 +127,10 @@ TEST(StaticFileHandlerTest, CanHandleInvalidPaths) {
 // test files that use all of the MimeTypes and verify that it can read
 // them
 TEST_F(StaticFileHandlerText, HandleRequestWithAllFiles) {
-    auto handler = getHandler();
-    for (const auto &file : getMockFiles()) {
-        auto response = handler.HandleRequest(getRequest("GET", file.first));
+    const std::string PREFIX = "/base";
+    auto handler = getHandler(PREFIX);
+    for (const auto &file : createDefaultFiles()) {
+        auto response = handler.HandleRequest(getRequest("GET", PREFIX + "/" + file.first));
         EXPECT_EQ(response.status, StatusCode::OK);
         EXPECT_EQ(response.body, file.second);
     }
@@ -126,21 +138,25 @@ TEST_F(StaticFileHandlerText, HandleRequestWithAllFiles) {
 
 // test that non-existent file returns 404
 TEST_F(StaticFileHandlerText, HandleRequestWithNonExistentFile) {
-    auto handler = getHandler();
-    auto response = handler.HandleRequest(getRequest("GET", "non-existent.txt"));
+    const std::string PREFIX = "/base";
+    const std::string FILEPATH = PREFIX + "/non-existent.txt";
+    auto handler = getHandler(PREFIX);
+    auto response = handler.HandleRequest(getRequest("GET", FILEPATH));
     EXPECT_EQ(response.status, StatusCode::NOT_FOUND);
     EXPECT_EQ(response.body, "404 Not Found");
 }
 
 // test that providing incorrect method results in BAD_REQUEST
 TEST_F(StaticFileHandlerText, HandleRequestWithBadRequest) {
-    auto handler = getHandler();
-    const auto iterFile = getMockFiles().begin();
+    const FileMapRef &files = createDefaultFiles();
+    const std::string PREFIX = "/base";
+    const std::string FILEPATH = PREFIX + "/" + files.at(0).first;
+    auto handler = getHandler(PREFIX);
 
     // make sure the fixture has at least one test
-    EXPECT_TRUE(iterFile != getMockFiles().end());
+    EXPECT_FALSE(files.empty());
 
-    auto response = handler.HandleRequest(getRequest("POST", iterFile->first));
+    auto response = handler.HandleRequest(getRequest("POST", FILEPATH));
     EXPECT_EQ(response.status, StatusCode::BAD_REQUEST);
     EXPECT_EQ(response.body, "");
 }
@@ -148,8 +164,12 @@ TEST_F(StaticFileHandlerText, HandleRequestWithBadRequest) {
 // tests that the request doesn't access files outside of the mapped
 // base directory
 TEST_F(StaticFileHandlerText, HandleRequestAttemptBacktracking) {
-    auto handler = getHandler();
-    auto request = getRequest("GET", "../" + getOutOfBoundsFilename());
+    const std::string PREFIX = "/base";
+    const FileMapRef &files = addUnreachableFile("secret.txt", "get pwned", [](auto) {});
+    const std::string FILEPATH = PREFIX + "/../" + files.at(0).first;
+    auto handler = getHandler(PREFIX);
+
+    auto request = getRequest("GET", FILEPATH);
     auto response = handler.HandleRequest(request);
     EXPECT_EQ(response.status, StatusCode::FORBIDDEN);
     EXPECT_EQ(response.body, "403 Forbidden");
@@ -157,48 +177,27 @@ TEST_F(StaticFileHandlerText, HandleRequestAttemptBacktracking) {
 
 // test that the function gracefully fails with 1000+ MB file
 TEST_F(StaticFileHandlerText, HandleRequestFailureWithLargeFile) {
-    namespace fs = boost::filesystem;
-    auto handler = getHandler();
-    constexpr auto filename = "massive_file.txt";
     constexpr std::size_t oversize = 100 * 1024 * 1024 + 1;
-    const auto content = std::string(oversize, ' ');
+    const std::string PREFIX = "/base";
+    const FileMapRef &files = addFile("massive_file.txt", std::string(oversize, ' '), [](auto) {});
+    const std::string FILEPATH = PREFIX + "/" + files.at(0).first;
+    auto handler = getHandler(PREFIX);
 
-    // call fixture function to create file with unset read bit
-    addFile(filename, content, [](fs::path) {});
-
-    auto response = handler.HandleRequest(getRequest("GET", filename));
+    auto response = handler.HandleRequest(getRequest("GET", FILEPATH));
     EXPECT_EQ(response.status, StatusCode::NOT_FOUND);
     EXPECT_EQ(response.body, "404 Not Found");
 }
 
-TEST(StaticFileHandlerTest, CanReadFromEmptyBaseTag) {
-    // this cannot use the StaticFileHandlerText fixture because it
-    // enforces /base as the tag to use. It cannot be changed.
-
-    namespace fs = boost::filesystem;
-    constexpr auto filename = "somefile.txt";
-    constexpr auto filecontent = "foo bar";
-
-    fs::path tempDir = fs::temp_directory_path() / fs::unique_path();
-    fs::path baseDir = tempDir / "static";
-
-    fs::create_directories(baseDir);
-
-    // map temp directory to empty tag
-    StaticFileHandler handler = StaticFileHandler("", baseDir.string());
-    // create file
-    std::ofstream(baseDir / filename) << filecontent;
-
-    // construct request
-    HttpRequest request;
-    request.version = "HTTP/1.1";
-    request.method = "GET";
-    request.path = filename;
-    request.headers = {};
-    request.body = "";
+TEST_F(StaticFileHandlerText, CanReadFromEmptyBaseTag) {
+    constexpr std::size_t oversize = 100 * 1024 * 1024 + 1;
+    const std::string PREFIX = "/base";
+    const FileMapRef &files = addFile("somefile.txt", "foo bar", [](auto) {});
+    const std::string FILEPATH = PREFIX + "/" + files.at(0).first;
+    const std::string CONTENT = files.at(0).second;
+    auto handler = getHandler(PREFIX);
 
     // should be read correctly
-    auto response = handler.HandleRequest(request);
+    auto response = handler.HandleRequest(getRequest("GET", FILEPATH));
     EXPECT_EQ(response.status, StatusCode::OK);
-    EXPECT_EQ(response.body, filecontent);
+    EXPECT_EQ(response.body, CONTENT);
 }

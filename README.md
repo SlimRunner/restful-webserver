@@ -25,9 +25,12 @@ This project uses a docker container to run the project. To set that up run
 Assuming that you have your devel tools one directory up.
 
 ### Run CMake
-You can run this manually or use our script `./run_build.sh` to configure everything. The command has three modes
-* without flags it generates the `build` and `build_coverage` directories and calls cmake on them
-* with `--all` the same as the previous one but also runs `make` and `make coverage` respectively
-* with `--clean` deletes the `build` and `build_coverage` directories
+You can run this manually or use our script `./run_build.sh` to configure everything. The command has the following modes:
 
-From here you can manually `cd` into which ever build you want to test and run a `make` command to test.
+* `--clean`: Deletes the `build` and `build_coverage` directories.
+* `--build`: Builds the release version only.
+* `--int`: Updates the build with CMake and runs integration tests only.
+* `--cover`: Builds the coverage version only.
+* `-h`, `--help`: get this same help in the terminal
+
+You can still manually `cd` into the desired build directory and run the appropriate `make` commands to test or execute the build.

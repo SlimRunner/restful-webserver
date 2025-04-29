@@ -67,7 +67,7 @@ include_directories(
     src/server/request_handlers
     src/util
 )
-add_executable(webserver 
+add_executable(webserver
     src/server_main.cc
 )
 
@@ -75,7 +75,7 @@ add_library(server_logic
   src/server/server.cc
   src/server/session.cc
 )
-# Reformating to  fit in screen. Adding 
+# Reformating to  fit in screen. Adding
 target_link_libraries(webserver
   Boost::system
   # Adding log_setup and log as dependencies
@@ -152,9 +152,17 @@ endforeach()
 
 
 # Copy the integration test script to the build directory
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/src/server/tests/integration_test.py 
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/src/server/tests/integration_test.py
      DESTINATION ${CMAKE_BINARY_DIR}
      FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/configs/server_config.txt
+     DESTINATION ${CMAKE_BINARY_DIR}
+     FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ)
+
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/static
+     DESTINATION ${CMAKE_BINARY_DIR}
+     FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ)
 
 # Manually add the integration test (To run you can use `ctest -R integration_test`)
 add_test(
