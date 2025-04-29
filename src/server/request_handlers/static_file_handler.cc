@@ -64,36 +64,6 @@ HttpResponse StaticFileHandler::HandleRequest(const HttpRequest &request) {
     // Check if file exists before trying to read it
     if (!std::filesystem::exists(file_path)) {
         BOOST_LOG_TRIVIAL(warning) << "Requested file not found: " << file_path;
-
-        // Log more details about the path
-        BOOST_LOG_TRIVIAL(info) << "Path details:";
-        BOOST_LOG_TRIVIAL(info) << "  Base directory: " << base_dir_;
-        BOOST_LOG_TRIVIAL(info) << "  Relative path: " << relative_path;
-        BOOST_LOG_TRIVIAL(info) << "  Full path: " << file_path;
-        
-        // Check if the parent directory exists
-        std::filesystem::path parent_dir = std::filesystem::path(file_path).parent_path();
-        BOOST_LOG_TRIVIAL(info) << "  Parent directory: " << parent_dir.string();
-        BOOST_LOG_TRIVIAL(info) << "  Parent directory exists: " << (std::filesystem::exists(parent_dir) ? "Yes" : "No");
-        
-        // If parent directory exists, list its contents
-        if (std::filesystem::exists(parent_dir)) {
-            BOOST_LOG_TRIVIAL(info) << "  Directory contents:";
-            try {
-                for (const auto& entry : std::filesystem::directory_iterator(parent_dir)) {
-                    BOOST_LOG_TRIVIAL(info) << "    " << entry.path().filename().string();
-                }
-            } catch (const std::filesystem::filesystem_error& e) {
-                BOOST_LOG_TRIVIAL(error) << "  Error listing directory: " << e.what();
-            }
-        }
-        
-        // Also log the current working directory
-        try {
-            BOOST_LOG_TRIVIAL(info) << "  Current working directory: " << std::filesystem::current_path().string();
-        } catch (const std::filesystem::filesystem_error& e) {
-            BOOST_LOG_TRIVIAL(error) << "  Error getting current working directory: " << e.what();
-        }
         
         response.status = StatusCode::NOT_FOUND;
         response.body = "404 Not Found";
