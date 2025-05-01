@@ -1,36 +1,32 @@
+- [HTTP Server](#http-server)
+  - [CS 132 - tutututu-maxverstappen](#cs-132---tutututu-maxverstappen)
+  - [Project Documents](#project-documents)
+  - [Recommended VS Code Extensions](#recommended-vs-code-extensions)
+
 # HTTP Server
-## C++ Development
-### Setup
-To keep code clean do the following to setup auto-formatting:
+## CS 132 - tutututu-maxverstappen
+Group Members
+* Escobar, Christian
+* Flores, Mario
+* Kimoliatis, Christopher
+* Martinez, Carlos
 
-First, add the following to your `.vscode/settings.json`
-```jsonc
-{
-  "[cpp]": {
-    "editor.tabSize": 4,
-    "editor.insertSpaces": true
-  },
-  "C_Cpp.clang_format_style": "file", // Use .clang-format if available
-  "C_Cpp.clang_format_fallbackStyle": "Google", // Or LLVM, Mozilla, etc.
-  "editor.formatOnSave": true
-}
-```
-Append, this to whatever is in there already. This file is not tracked because it contains noise that the C++ extension adds. With this in there now the `.clang-format` will setup all the rules we want for formatting. Lastly, this makes it so that the format is applied every time you save to make it easier to keep a consistent code style.
+This is a cloud-deployed web server used for the purpose of learning software enginering principles.
 
-### Devel Environment
-This project uses a docker container to run the project. To set that up run
-```sh
- ../tools/env/start.sh -u mariomar314 -r
-```
-Assuming that you have your devel tools one directory up.
+## Project Documents
+* [Quick Commit Guide](./docs/quick-commit-guide.md)
+* [Development](./docs/development.md)
+* [Debugging](./docs/debugging.md)
+* [Documentation](./docs/documentation.md)
 
-### Run CMake
-You can run this manually or use our script `./run_build.sh` to configure everything. The command has the following modes:
-
-* `--clean`: Deletes the `build` and `build_coverage` directories.
-* `--build`: Builds the release version only.
-* `--int`: Updates the build with CMake and runs integration tests only.
-* `--cover`: Builds the coverage version only.
-* `-h`, `--help`: get this same help in the terminal
-
-You can still manually `cd` into the desired build directory and run the appropriate `make` commands to test or execute the build.
+## Recommended VS Code Extensions
+* [Rewrap](https://marketplace.visualstudio.com/items/?itemName=stkb.rewrap)
+  * `ctrl+q` for automatic line wrapping.
+* [Bookmarks](https://marketplace.visualstudio.com/items/?itemName=alefragnani.Bookmarks)
+  * `ctrl+k` to add bookmarks, `ctrl+l` to go to the next one.
+* [Black Formatter](https://marketplace.visualstudio.com/items/?itemName=ms-python.black-formatter)
+* [Git Graph](https://marketplace.visualstudio.com/items/?itemName=mhutchie.git-graph)
+  *  good formatter for Python code
+* [Markdown All in One](https://marketplace.visualstudio.com/items/?itemName=yzhang.markdown-all-in-one)
+  * Allows you to automatically update and generate a table of contents.
+* [C++ Extension pack](https://marketplace.visualstudio.com/items/?itemName=ms-vscode.cpptools-extension-pack)
