@@ -41,8 +41,11 @@ Append this to whatever is in there already. This file is not tracked because it
 ### Devel Environment
 This project uses a Docker container to run the project. To set that up, run:
 ```sh
- ../tools/env/start.sh -u mariomar314 -r
+ ../tools/env/start.sh -u ${User_Name} -r
 ```
+
+Optional: -r, flag to mirror the boost, gtest, and gmock libraries into the repo to get intellisense and autocomplete
+
 Assuming that you have your devel tools one directory up.
 
 ### Run CMake
@@ -56,7 +59,7 @@ You can run this manually or use our script `./run_build.sh` to configure everyt
 
 You can still manually `cd` into the desired build directory and run the appropriate `make` commands to test or execute the build.
 
-## Setup Local Environment
+## Setup Local Container for Testing
 There are many ways to set up this project locally. This will describe the recommended way using a VM with Ubuntu.
 
 ### Create Docker Container
@@ -103,6 +106,7 @@ Another thing to note is that when you run this, the server will take over your 
 docker stop my_run
 ```
 It takes about 10 seconds to shut it down.
+## Setup Local Development
 
 ### Create VM
 1. Download the current Ubuntu LTS from [their website](https://ubuntu.com/download/desktop).
