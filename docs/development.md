@@ -3,12 +3,13 @@
     - [Setup IDE](#setup-ide)
     - [Devel Environment](#devel-environment)
     - [Run CMake](#run-cmake)
-  - [Setup Local Environment](#setup-local-environment)
+  - [Setup Local Container for Testing](#setup-local-container-for-testing)
     - [Create Docker Container](#create-docker-container)
       - [Clone Repo from Gerrit](#clone-repo-from-gerrit)
       - [Create Base](#create-base)
       - [Run Config File to Test and Deploy](#run-config-file-to-test-and-deploy)
       - [Run the Web Server](#run-the-web-server)
+  - [Setup Local Development](#setup-local-development)
     - [Create VM](#create-vm)
     - [Configure VM](#configure-vm)
       - [The Essentials](#the-essentials)
@@ -74,7 +75,7 @@ Now find the file `~/.ssh/id_ed25519.pub` or `C:\Users\user_name\.ssh\id_ed25519
 Now clone using SSH to get the repo locally. You can find the commands here:
 > [https://code.cs130.org/admin/repos/tutututu-maxverstappen,general](https://code.cs130.org/admin/repos/tutututu-maxverstappen,general)
 
-**IMPORTANT**: Use the one with the hook. Otherwise, you won't be able to commit.
+This setup is just for testing so it is not essential to get the commit message hook, as you won't be pushing for review.
 
 #### Create Base
 Since our config file references itself, you must first build the base and then run the config on the latest:
@@ -106,6 +107,7 @@ Another thing to note is that when you run this, the server will take over your 
 docker stop my_run
 ```
 It takes about 10 seconds to shut it down.
+
 ## Setup Local Development
 
 ### Create VM
@@ -113,7 +115,7 @@ It takes about 10 seconds to shut it down.
 2. [Download and install VirtualBox](https://www.virtualbox.org/wiki/Downloads). Use the platform packages.
 3. Once in VirtualBox, click `New`.
 4. Select the ISO you downloaded in step one.
-   1. Leave the unattended install checked.
+   1. Leave "skip unattended install" unchecked.
    2. 8 GB of memory is recommended.
    3. 35 GB of storage is recommended.
    4. Use half of your cores (recommended).
@@ -175,6 +177,16 @@ gcloud init
 ```
 If it does not work, you did not set up the PATH.
 
+Before finishing run this command
+```sh
+docker run hello-world
+```
+If that fails (which likely will), then you have to add yourself to the docker group:
+```sh
+sudo usermod -aG docker $USER
+```
+[Visit this link](https://stackoverflow.com/questions/48957195/how-to-fix-docker-permission-denied) if you need further help with docker
+
 ### Setup SSH
 ```sh
 sudo apt update
@@ -196,7 +208,7 @@ cd cs130
 git clone https://code.cs130.org/tools
 cd ..
 ssh-keygen -t ed25519
-gnome-text-editor .bashrc
+gnome-text-editor ~/.ssh/id_ed25519.pub
 # copy the contents
 ```
 Now do the following:
@@ -204,13 +216,15 @@ Now do the following:
 2. Go to [code.cs130.org](https://code.cs130.org/).
    1. You should be signed in because of the earlier step in GCloud.
 3. Go to settings > keygen > paste SSH key you copied.
-4. Now go to [browse > repos > tututu... > SSH without hook](https://code.cs130.org/admin/repos/tutututu-maxverstappen,general) and copy that command.
+4. Now go to [browse > repos > tututu... > SSH](https://code.cs130.org/admin/repos/tutututu-maxverstappen,general) and copy that command.
+
+**IMPORTANT**: Use the SSH command *with* hook. Otherwise, you won't be able to commit.
 
 ```sh
 cd ~/cs130
 git clone "ssh://USERNAME@code.cs130.org:29418/tutututu-maxverstappen"
 cd tutututu-maxverstappen
-../tools/env/start.sh -u ${USER} -r
+../tools/env/start.sh -u USERNAME -r
 ```
 Now attempt to pull:
 ```sh

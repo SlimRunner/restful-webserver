@@ -1,6 +1,6 @@
 listen 80;
 
-# Echo handler for /echo path 
+# Echo handler for /echo path
 /echo {
     handler EchoHandler;
 }
