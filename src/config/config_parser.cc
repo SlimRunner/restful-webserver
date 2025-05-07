@@ -17,8 +17,13 @@
 #include <string>
 #include <vector>
 
+// Default constructor for NginxConfigParser.
 NginxConfigParser::NginxConfigParser() {}
 
+/*
+Converts the NginxConfig object into a formatted string.
+Recursively calls ToString on each statement with indentation.
+*/
 std::string NginxConfig::ToString(int depth) {
     std::string serialized_config;
     for (const auto& statement : statements_) {
@@ -27,6 +32,10 @@ std::string NginxConfig::ToString(int depth) {
     return serialized_config;
 }
 
+/*
+Converts a single config statement to a formatted string.
+Includes nested blocks if present, with proper indentation.
+*/
 std::string NginxConfigStatement::ToString(int depth) {
     std::string serialized_statement;
     for (int i = 0; i < depth; ++i) {
@@ -52,6 +61,7 @@ std::string NginxConfigStatement::ToString(int depth) {
     return serialized_statement;
 }
 
+// Returns a human-readable string representation of a TokenType enum value.
 const char* NginxConfigParser::TokenTypeAsString(TokenType type) {
     switch (type) {
         case TOKEN_TYPE_START:
@@ -75,6 +85,11 @@ const char* NginxConfigParser::TokenTypeAsString(TokenType type) {
     }
 }
 
+/*
+Extracts a single token from the input stream.
+Supports quoted strings, comments, and special characters.
+Returns the token type and writes the value into `*value`.
+*/
 NginxConfigParser::TokenType NginxConfigParser::ParseToken(std::istream* input,
                                                            std::string* value) {
     TokenParserState state = TOKEN_STATE_INITIAL_WHITESPACE;
@@ -154,6 +169,11 @@ NginxConfigParser::TokenType NginxConfigParser::ParseToken(std::istream* input,
     return TOKEN_TYPE_EOF;
 }
 
+/*
+Parses an nginx-style config from a stream into a NginxConfig object.
+Builds a hierarchical structure of statements and blocks.
+Returns true if parsing is successful and the config is valid.
+*/
 bool NginxConfigParser::Parse(std::istream* config_file, NginxConfig* config) {
     std::stack<NginxConfig*> config_stack;
     config_stack.push(config);
@@ -234,6 +254,11 @@ bool NginxConfigParser::Parse(std::istream* config_file, NginxConfig* config) {
     return false;
 }
 
+/*
+Parses an nginx-style config file by filename.
+Opens the file, delegates to the stream-based Parse method.
+Returns true if the config is valid.
+*/
 bool NginxConfigParser::Parse(const char* file_name, NginxConfig* config) {
     std::ifstream config_file;
     config_file.open(file_name);

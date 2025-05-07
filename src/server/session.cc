@@ -7,15 +7,22 @@
 #include <string>
 using namespace boost::placeholders;
 
+/*
+Constructs a new session.
+- io_service: Boost I/O context for asynchronous operations.
+- handlers: list of request handlers used to process incoming requests.
+*/
 session::session(boost::asio::io_service &io_service,
                  std::vector<std::shared_ptr<RequestHandler>> handlers)
     // adding already_deleted_ member to constructor
     : socket_(io_service), handlers_(handlers), already_deleted_(false) {}
 
+// Returns a reference to the TCP socket associated with this session.
 tcp::socket &session::socket() {
     return socket_;
 }
 
+// Starts reading from the client asynchronously.
 void session::start() {
     BOOST_LOG_TRIVIAL(debug) << "Session started: waiting for request";
     socket_.async_read_some(
@@ -24,13 +31,15 @@ void session::start() {
                     boost::asio::placeholders::bytes_transferred));
 }
 
-// Helper function to set the request member. Used for testing.
+// Directly sets the request buffer (used in unit tests).
 void session::set_request(const std::string &req) {
     request_buffer_ = req;
 }
 
-// Helper function to prevent freeing the same memory twice
-// as deletion is done in handle_read and handle_write methods
+/*
+Helper function to prevent freeing the same memory twice
+as deletion is done in handle_read and handle_write methods
+*/
 void session::safe_delete() {
     if (!already_deleted_) {
         BOOST_LOG_TRIVIAL(debug) << "Session deleted.";
@@ -39,6 +48,7 @@ void session::safe_delete() {
     }
 }
 
+// Parses a raw HTTP request string into a structured HttpRequest object.
 HttpRequest session::ParseRequest(const std::string &request_str) {
     HttpRequest request;
     std::istringstream stream(request_str);
@@ -76,14 +86,21 @@ HttpRequest session::ParseRequest(const std::string &request_str) {
     return request;
 }
 
+/*
+Handles incoming data on the socket.
+Parses one or more complete requests and dispatches them to handlers.
+*/
 void session::handle_read(const boost::system::error_code &error, size_t bytes_transferred) {
     if (error) {
         BOOST_LOG_TRIVIAL(error) << "Socket read error: " << error.message();
         safe_delete();  // to avoid Double Free Error
         return;
     }
-    // Before appending, check if it will exceed a defined maximum buffer size
-    // buffer size limit defined in session.h, currently 8192 bytes = 8 KB
+
+    /*
+    Before appending, check if it will exceed a defined maximum buffer size
+    buffer size limit defined in session.h, currently 8192 bytes = 8 KB
+    */
     if (request_buffer_.size() + bytes_transferred > max_request_size_) {
         BOOST_LOG_TRIVIAL(warning)
             << "Payload too large: " << request_buffer_.size() + bytes_transferred << " bytes";
@@ -190,15 +207,16 @@ void session::handle_read(const boost::system::error_code &error, size_t bytes_t
                             boost::bind(&session::handle_read, this, _1, _2));
 }
 
+/*
+Called after writing a response to the client.
+If the connection is still open, continues reading the next request.
+*/
 void session::handle_write(const boost::system::error_code &error) {
     if (error) {
         BOOST_LOG_TRIVIAL(error) << "Write error: " << error.message();
         safe_delete();
         return;
     }
-
-    // Log successful write for debugging
-    // std::cout << "Response sent successfully" << std::endl;
 
     // Continue reading for more requests (only if we're expecting more)
     if (!socket_.is_open()) {

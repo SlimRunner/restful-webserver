@@ -16,9 +16,18 @@ std::map<std::string, std::string> StaticFileHandler::mime_types_ = {
     {".pdf", "application/pdf"}, {".zip", "application/zip"}, {".json", "application/json"},
     {".xml", "application/xml"}, {".ico", "image/x-icon"}};
 
+/*
+Constructor for StaticFileHandler.
+ - path_prefix: the URL path this handler should respond to (e.g. "/static").
+ - base_dir: the base directory on the filesystem to serve files from.
+*/
 StaticFileHandler::StaticFileHandler(const std::string &path_prefix, const std::string &base_dir)
     : path_prefix_(path_prefix), base_dir_(base_dir) {}
 
+/*
+Handles an HTTP GET request by serving a file from disk.
+Returns 400 for non-GET methods, 403 for unsafe paths, and 404 if the file is missing.
+*/
 HttpResponse StaticFileHandler::HandleRequest(const HttpRequest &request) {
     HttpResponse response;
 
@@ -122,10 +131,15 @@ HttpResponse StaticFileHandler::HandleRequest(const HttpRequest &request) {
     return response;
 }
 
+// Determines whether this handler should process the given request path.
 bool StaticFileHandler::CanHandle(const std::string &path) const {
     return path.substr(0, path_prefix_.size()) == path_prefix_;
 }
 
+/*
+Verifies that the requested file path does not escape the base directory.
+Prevents directory traversal attacks (e.g. using ../ to access unauthorized files).
+*/
 bool StaticFileHandler::IsPathSafe(const std::string &path) const {
     // Convert both paths to absolute, normalized paths
     std::filesystem::path abs_base_dir = std::filesystem::absolute(base_dir_).lexically_normal();
@@ -135,11 +149,17 @@ bool StaticFileHandler::IsPathSafe(const std::string &path) const {
     std::string norm_base_dir = abs_base_dir.string();
     std::string norm_requested_path = abs_requested_path.string();
 
-    // Check if the normalized requested path starts with the normalized base directory
-    // This ensures the requested path is within the base directory
+    /*
+    Check if the normalized requested path starts with the normalized base directory
+    This ensures the requested path is within the base directory
+    */
     return norm_requested_path.substr(0, norm_base_dir.size()) == norm_base_dir;
 }
 
+/*
+Determines the correct MIME type for the given file path based on its extension.
+Returns "application/octet-stream" if the extension is unknown.
+*/
 std::string StaticFileHandler::GetMimeType(const std::string &file_path) const {
     // Get file extension
     size_t last_dot = file_path.find_last_of('.');
@@ -157,6 +177,12 @@ std::string StaticFileHandler::GetMimeType(const std::string &file_path) const {
     return "application/octet-stream";
 }
 
+/*
+Reads a file from disk into memory.
+- file_path: absolute path to the file.
+- success: output flag indicating if the file was successfully read.
+Returns the file contents as a string (supports binary data).
+*/
 std::string StaticFileHandler::ReadFile(const std::string &file_path, bool &success) const {
     // Open file in binary mode
     std::ifstream file(file_path, std::ios::binary | std::ios::ate);

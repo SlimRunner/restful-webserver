@@ -3,6 +3,15 @@
 #include <boost/log/trivial.hpp>
 #include <sstream>
 
+
+/*
+Serializes the HttpResponse object into a raw HTTP response string.
+
+Returns:
+- A complete HTTP/1.1 response string with status line, headers, and body.
+- Properly handles binary-safe body content using string::append.
+- Logs the status and content length for debugging.
+*/
 std::string HttpResponse::ToString() const {
     std::string headers_str;
 
@@ -37,8 +46,10 @@ std::string HttpResponse::ToString() const {
     // Empty line separating headers from body
     headers_str += "\r\n";
 
-    // Create the full response by concatenating headers and body
-    // Using string's append to handle binary data properly
+    /*
+    Create the full response by concatenating headers and body
+    Using string's append to handle binary data properly
+    */
     std::string full_response;
     full_response.reserve(headers_str.size() + body.size());
     full_response.append(headers_str);
