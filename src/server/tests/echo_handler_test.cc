@@ -1,38 +1,40 @@
 #include "../request_handlers/echo_handler.h"
+#include "../request_handlers/handler_registry.h"
 
 #include <array>
 #include <sstream>
+#include <memory>
 
 #include "gtest/gtest.h"
 
 // tests that the handler can handle valid paths of different lengths
 TEST(EchoHandlerTest, CanHandleGoodPrefixes) {
-    EchoHandler eHandler("/echo");
+    EchoHandler eHandler("/echo", {});
     // assumptions: correct handlers...
     // - don't ignore slashes
     // - allow any level of depth
     // - are case-sensitive
-    EXPECT_TRUE(eHandler.CanHandle("/echo"));
-    EXPECT_TRUE(eHandler.CanHandle("/echo/hello"));
-    EXPECT_TRUE(eHandler.CanHandle("/echo/hello/world/file"));
+    EXPECT_TRUE(eHandler.can_handle("/echo"));
+    EXPECT_TRUE(eHandler.can_handle("/echo/hello"));
+    EXPECT_TRUE(eHandler.can_handle("/echo/hello/world/file"));
 }
 
 // tests that the handler correctly rejects non-matching paths
 TEST(EchoHandlerTest, CanHandleBadPrefixes) {
-    EchoHandler eHandler("/echo");
+    EchoHandler eHandler("/echo", {});
     // assumptions: correct handlers...
     // - don't ignore slashes
     // - allow any level of depth
     // - are case-sensitive
-    EXPECT_FALSE(eHandler.CanHandle("echo"));
-    EXPECT_FALSE(eHandler.CanHandle("/ech"));
-    EXPECT_FALSE(eHandler.CanHandle("/ECHO"));
-    EXPECT_FALSE(eHandler.CanHandle("/other"));
+    EXPECT_FALSE(eHandler.can_handle("echo"));
+    EXPECT_FALSE(eHandler.can_handle("/ech"));
+    EXPECT_FALSE(eHandler.can_handle("/ECHO"));
+    EXPECT_FALSE(eHandler.can_handle("/other"));
 }
 
 // tests that the handler correctly generates a GET response
 TEST(EchoHandlerTest, HandleGetRequestEchoesRequest) {
-    EchoHandler eHandler("/echo");
+    EchoHandler eHandler("/echo",{});
     HttpRequest req;
     req.method = "GET";
     req.path = "/echo/path";
@@ -40,9 +42,9 @@ TEST(EchoHandlerTest, HandleGetRequestEchoesRequest) {
     req.headers = {{"Host", "localhost"}, {"Accept", "*/*"}};
     req.body = "test body";
 
-    HttpResponse resp = eHandler.HandleRequest(req);
+    std::shared_ptr<HttpResponse> resp = eHandler.handle_request(req);
 
-    EXPECT_EQ(resp.status, StatusCode::OK);
+    EXPECT_EQ(resp->status, StatusCode::OK);
 
     std::ostringstream oss;
 
@@ -54,14 +56,14 @@ TEST(EchoHandlerTest, HandleGetRequestEchoesRequest) {
     oss << "\r\n" << req.body;
     const auto expected = oss.str();
 
-    EXPECT_EQ(resp.body, expected);
-    EXPECT_EQ(resp.headers.at("Content-Type"), "text/plain");
-    EXPECT_EQ(resp.headers.at("Content-Length"), std::to_string(expected.size()));
+    EXPECT_EQ(resp->body, expected);
+    EXPECT_EQ(resp->headers.at("Content-Type"), "text/plain");
+    EXPECT_EQ(resp->headers.at("Content-Length"), std::to_string(expected.size()));
 }
 
 // tests that the handler correctly rejects any non-GET request
 TEST(EchoHandlerTest, RejectsNonGet) {
-    EchoHandler eHandler("/echo");
+    EchoHandler eHandler("/echo",{});
     HttpRequest req;
     req.path = "/echo";
     req.version = "HTTP/1.1";
@@ -74,11 +76,32 @@ TEST(EchoHandlerTest, RejectsNonGet) {
 
     for (const auto &method : foo) {
         req.method = method;
-        HttpResponse resp = eHandler.HandleRequest(req);
+        std::shared_ptr<HttpResponse> resp = eHandler.handle_request(req);
 
-        EXPECT_EQ(resp.status, StatusCode::BAD_REQUEST);
-        EXPECT_EQ(resp.body, "");
-        EXPECT_EQ(resp.headers.at("Content-Type"), "text/plain");
-        EXPECT_EQ(resp.headers.at("Content-Length"), "0");
+        EXPECT_EQ(resp->status, StatusCode::BAD_REQUEST);
+        EXPECT_EQ(resp->body, "");
+        EXPECT_EQ(resp->headers.at("Content-Type"), "text/plain");
+        EXPECT_EQ(resp->headers.at("Content-Length"), "0");
     }
+}
+
+TEST(HandlerRegistryTest, EchoHandlerFactoryCreatesWorkingHandler) {
+    auto factory = HandlerRegistry::instance().get_factory("EchoHandler");
+    ASSERT_TRUE(factory != nullptr);
+
+    auto handler = factory("/echo", {});
+    ASSERT_TRUE(handler != nullptr);
+
+    HttpRequest req;
+    req.method = "GET";
+    req.path = "/echo";
+    req.version = "HTTP/1.1";
+    req.headers["Host"] = "localhost";
+    req.body = "Hello world";
+
+    auto response = handler->handle_request(req);
+    ASSERT_TRUE(response != nullptr);
+    EXPECT_EQ(response->status, StatusCode::OK);
+    EXPECT_TRUE(response->body.find("GET /echo HTTP/1.1") != std::string::npos);
+    EXPECT_TRUE(response->body.find("Hello world") != std::string::npos);
 }

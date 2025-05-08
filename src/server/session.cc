@@ -160,10 +160,10 @@ void session::handle_read(const boost::system::error_code &error, size_t bytes_t
         HttpResponse response;
 
         for (auto &handler : handlers_) {
-            if (handler->CanHandle(request.path)) {
+            if (handler->can_handle(request.path)) {
                 BOOST_LOG_TRIVIAL(debug) << "Handler matched for path: " << request.path
-                << " using handler type: " << typeid(*handler).name();
-                response = handler->HandleRequest(request);
+                                         << " using handler type: " << typeid(*handler).name();
+                response = *handler->handle_request(request);
                 handled = true;
                 break;
             }

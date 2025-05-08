@@ -5,6 +5,7 @@
 #include <map>
 #include <ostream>
 #include <string>
+#include <memory>
 
 // HTTP status codes
 enum class StatusCode {
@@ -40,10 +41,9 @@ class RequestHandler {
     virtual ~RequestHandler() = default;
 
     // Handle a request and generate a response
-    virtual HttpResponse HandleRequest(const HttpRequest& request) = 0;
+    virtual std::shared_ptr<HttpResponse> handle_request(const HttpRequest& request) = 0;
+    virtual bool can_handle(const std::string& path) const = 0;
 
-    // Check if this handler should process the given path
-    virtual bool CanHandle(const std::string& path) const = 0;
 };
 
 // Overload the stream insertion operator for StatusCode

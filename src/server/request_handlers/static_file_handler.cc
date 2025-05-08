@@ -8,6 +8,8 @@
 #include <sstream>
 #include <vector>
 
+volatile int force_link_static_handler = 0;
+
 // Initialize static mime_types_ map
 std::map<std::string, std::string> StaticFileHandler::mime_types_ = {
     {".html", "text/html"},      {".css", "text/css"},        {".js", "application/javascript"},
@@ -21,25 +23,31 @@ Constructor for StaticFileHandler.
  - path_prefix: the URL path this handler should respond to (e.g. "/static").
  - base_dir: the base directory on the filesystem to serve files from.
 */
-StaticFileHandler::StaticFileHandler(const std::string &path_prefix, const std::string &base_dir)
-    : path_prefix_(path_prefix), base_dir_(base_dir) {}
-
+StaticFileHandler::StaticFileHandler(const std::string &path_prefix, const std::map<std::string, std::string>& args)
+    : path_prefix_(path_prefix) {
+        auto it = args.find("root");
+        if (it != args.end()) {
+            base_dir_ = it->second;
+        } else {
+            throw std::runtime_error("StaticFileHandler requires a 'root' argument.");
+        }
+    }
 /*
 Handles an HTTP GET request by serving a file from disk.
 Returns 400 for non-GET methods, 403 for unsafe paths, and 404 if the file is missing.
 */
-HttpResponse StaticFileHandler::HandleRequest(const HttpRequest &request) {
-    HttpResponse response;
+std::shared_ptr<HttpResponse> StaticFileHandler::handle_request(const HttpRequest& request) {
+    auto response = std::make_shared<HttpResponse>();
 
     // Check if the request method is GET
     if (request.method != "GET") {
         BOOST_LOG_TRIVIAL(warning)
             << "StaticFileHandler rejected non-GET request: " << request.method;
         // Return 400 Bad Request for non-GET methods
-        response.status = StatusCode::BAD_REQUEST;
-        response.body = "";
-        response.headers["Content-Type"] = "text/plain";
-        response.headers["Content-Length"] = "0";
+        response->status = StatusCode::BAD_REQUEST;
+        response->body = "";
+        response->headers["Content-Type"] = "text/plain";
+        response->headers["Content-Length"] = "0";
         return response;
     }
 
@@ -58,13 +66,13 @@ HttpResponse StaticFileHandler::HandleRequest(const HttpRequest &request) {
     std::string file_path = base_dir_ + relative_path;
 
     // Security check - verify the path doesn't escape the base directory
-    if (!IsPathSafe(file_path)) {
+    if (!is_path_safe(file_path)) {
         BOOST_LOG_TRIVIAL(warning)
             << "Security warning: Attempted path traversal attack: " << file_path;
-        response.status = StatusCode::FORBIDDEN;
-        response.body = "403 Forbidden";
-        response.headers["Content-Type"] = "text/plain";
-        response.headers["Content-Length"] = std::to_string(response.body.size());
+        response->status = StatusCode::FORBIDDEN;
+        response->body = "403 Forbidden";
+        response->headers["Content-Type"] = "text/plain";
+        response->headers["Content-Length"] = std::to_string(response->body.size());
         return response;
     }
 
@@ -74,10 +82,10 @@ HttpResponse StaticFileHandler::HandleRequest(const HttpRequest &request) {
     if (!std::filesystem::exists(file_path)) {
         BOOST_LOG_TRIVIAL(warning) << "Requested file not found: " << file_path;
 
-        response.status = StatusCode::NOT_FOUND;
-        response.body = "404 Not Found";
-        response.headers["Content-Type"] = "text/plain";
-        response.headers["Content-Length"] = std::to_string(response.body.size());
+        response->status = StatusCode::NOT_FOUND;
+        response->body = "404 Not Found";
+        response->headers["Content-Type"] = "text/plain";
+        response->headers["Content-Length"] = std::to_string(response->body.size());
         return response;
     }
 
@@ -87,60 +95,55 @@ HttpResponse StaticFileHandler::HandleRequest(const HttpRequest &request) {
 
     // Read the file
     bool success = false;
-    std::string file_content = ReadFile(file_path, success);
+    std::string file_content = read_file(file_path, success);
 
     if (success) {
-        response.status = StatusCode::OK;
-        response.body = file_content;
-        response.headers["Content-Type"] = GetMimeType(file_path);
-        response.headers["Content-Length"] = std::to_string(file_content.size());
+        response->status = StatusCode::OK;
+        response->body = file_content;
+        response->headers["Content-Type"] = get_mime_type(file_path);
+        response->headers["Content-Length"] = std::to_string(file_content.size());
 
         // For zip files, add Content-Disposition header to help with downloads
-        std::string mime_type = GetMimeType(file_path);
+        std::string mime_type = get_mime_type(file_path);
         if (mime_type == "application/pdf") {
             // Extract filename from the path
             size_t last_slash = file_path.find_last_of("/");
             std::string filename =
                 (last_slash != std::string::npos) ? file_path.substr(last_slash + 1) : file_path;
-            response.headers["Content-Disposition"] = "attachment; filename=\"" + filename + "\"";
+            response->headers["Content-Disposition"] = "attachment; filename=\"" + filename + "\"";
 
             // Add cache control headers to prevent caching issues
-            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
-            response.headers["Pragma"] = "no-cache";
-            response.headers["Expires"] = "0";
+            response->headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+            response->headers["Pragma"] = "no-cache";
+            response->headers["Expires"] = "0";
         } else if (mime_type == "application/zip") {
             // Extract filename from the path
             size_t last_slash = file_path.find_last_of('/');
             std::string filename =
                 (last_slash != std::string::npos) ? file_path.substr(last_slash + 1) : file_path;
 
-            response.headers["Content-Disposition"] = "attachment; filename=\"" + filename + "\"";
+            response->headers["Content-Disposition"] = "attachment; filename=\"" + filename + "\"";
         }
 
         BOOST_LOG_TRIVIAL(info) << "Served file: " << file_path << " (" << file_content.size()
                                 << " bytes)"
-                                << " as " << GetMimeType(file_path);
+                                << " as " << get_mime_type(file_path);
     } else {
         BOOST_LOG_TRIVIAL(error) << "Failed to read file: " << file_path;
-        response.status = StatusCode::NOT_FOUND;
-        response.body = "404 Not Found";
-        response.headers["Content-Type"] = "text/plain";
-        response.headers["Content-Length"] = std::to_string(response.body.size());
+        response->status = StatusCode::NOT_FOUND;
+        response->body = "404 Not Found";
+        response->headers["Content-Type"] = "text/plain";
+        response->headers["Content-Length"] = std::to_string(response->body.size());
     }
 
     return response;
-}
-
-// Determines whether this handler should process the given request path.
-bool StaticFileHandler::CanHandle(const std::string &path) const {
-    return path.substr(0, path_prefix_.size()) == path_prefix_;
 }
 
 /*
 Verifies that the requested file path does not escape the base directory.
 Prevents directory traversal attacks (e.g. using ../ to access unauthorized files).
 */
-bool StaticFileHandler::IsPathSafe(const std::string &path) const {
+bool StaticFileHandler::is_path_safe(const std::string &path) const {
     // Convert both paths to absolute, normalized paths
     std::filesystem::path abs_base_dir = std::filesystem::absolute(base_dir_).lexically_normal();
     std::filesystem::path abs_requested_path = std::filesystem::absolute(path).lexically_normal();
@@ -160,7 +163,7 @@ bool StaticFileHandler::IsPathSafe(const std::string &path) const {
 Determines the correct MIME type for the given file path based on its extension.
 Returns "application/octet-stream" if the extension is unknown.
 */
-std::string StaticFileHandler::GetMimeType(const std::string &file_path) const {
+std::string StaticFileHandler::get_mime_type(const std::string &file_path) const {
     // Get file extension
     size_t last_dot = file_path.find_last_of('.');
     if (last_dot != std::string::npos) {
@@ -183,7 +186,7 @@ Reads a file from disk into memory.
 - success: output flag indicating if the file was successfully read.
 Returns the file contents as a string (supports binary data).
 */
-std::string StaticFileHandler::ReadFile(const std::string &file_path, bool &success) const {
+std::string StaticFileHandler::read_file(const std::string &file_path, bool &success) const {
     // Open file in binary mode
     std::ifstream file(file_path, std::ios::binary | std::ios::ate);
     if (!file.is_open()) {
@@ -218,3 +221,10 @@ std::string StaticFileHandler::ReadFile(const std::string &file_path, bool &succ
     // Convert to string - this works for both text and binary files
     return std::string(buffer.data(), size);
 }
+
+/*
+This program is ran at startup, before main()
+It lets the registry know that if we need StaticFileHandler it will start building it 
+*/
+#include "handler_registry.h"
+REGISTER_HANDLER_WITH_NAME(StaticFileHandler, "StaticHandler")

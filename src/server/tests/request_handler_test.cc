@@ -1,4 +1,5 @@
 #include "../request_handlers/request_handler.h"
+#include "../request_handlers/handler_registry.h"
 
 #include <sstream>
 
@@ -85,4 +86,28 @@ TEST(RequestHandlerPayload, RequestWithHeader) {
     std::string res = httpRes.ToString();
 
     EXPECT_EQ(res, header);
+}
+
+TEST(HandlerRegistryTest, StaticHandlerServesFileCorrectly) {
+    extern volatile int force_link_static_handler;
+    (void)force_link_static_handler;
+
+    // Assume static dir exists with test.txt file
+    auto factory = HandlerRegistry::instance().get_factory("StaticHandler");
+    ASSERT_TRUE(factory != nullptr);
+
+    std::map<std::string, std::string> args = {{"root", "./static"}};
+    auto handler = factory("/static", args);
+    ASSERT_TRUE(handler != nullptr);
+
+    HttpRequest req;
+    req.method = "GET";
+    req.path = "/static/index.txt";
+    req.version = "HTTP/1.1";
+
+    auto response = handler->handle_request(req);
+    ASSERT_TRUE(response != nullptr);
+    EXPECT_EQ(response->status, StatusCode::OK);
+    EXPECT_EQ(response->headers["Content-Type"], "text/plain");
+    EXPECT_FALSE(response->body.empty());
 }

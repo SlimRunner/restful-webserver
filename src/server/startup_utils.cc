@@ -6,11 +6,16 @@
 #include "logger.h"
 #include "server.h"
 #include "tagged_exceptions.h"
+#include "handler_registry.h"
 
 using nginx_shared_statement = std::shared_ptr<NginxConfigStatement>;
 using leaf_config_map = std::map<std::string, std::vector<std::vector<std::string>>>;
 using nested_config_map = std::map<std::string, std::vector<nginx_shared_statement>>;
 using nginx_config_map = std::map<std::string, std::vector<nginx_shared_statement>>;
+
+//This forces the link, to add more handlers forcing a link here is necessary
+extern volatile int force_link_echo_handler;
+extern volatile int force_link_static_handler;
 
 static nginx_config_map unroll_one_level(const std::vector<nginx_shared_statement> &);
 static bool string_is_quoted(std::string);
@@ -29,6 +34,10 @@ std::optional<std::string> parse_arguments(int argc, const char *const argv[]) {
 std::optional<config_payload> parse_config(std::string filepath) {
     constexpr auto PORT_KEY = "port";
     constexpr auto LOCATION_KEY = "location";
+
+    //These lines force the linking between the parser and the handlers mainly for testing 
+    (void)force_link_echo_handler;
+    (void)force_link_static_handler;
 
     NginxConfigParser config_parser;
     NginxConfig config;
@@ -54,7 +63,10 @@ std::optional<config_payload> parse_config(std::string filepath) {
 
     if (!root_config_map.count(LOCATION_KEY)) {
         BOOST_LOG_TRIVIAL(warning) << "No handlers configured. Defaulting to EchoHandler.";
-        payload.handlers.push_back(std::make_shared<EchoHandler>("/"));
+        auto factory = HandlerRegistry::instance().get_factory("EchoHandler");
+        if (factory) {
+            payload.handlers.push_back(factory("/", {}));
+        }
         return payload;
     }
 
@@ -97,35 +109,45 @@ std::optional<config_payload> parse_config(std::string filepath) {
             location_configs = unroll_one_level(child_block->statements_);
         }
 
-        if (handler_name == "EchoHandler") {
-            payload.handlers.push_back(std::make_shared<EchoHandler>(serving_path));
-
-        } else if (handler_name == "StaticHandler" && location_configs.count("root")) {
-            const auto &root = location_configs.at("root").at(0)->tokens_;
-
-            if (root.size() != 2) {
-                BOOST_LOG_TRIVIAL(warning) << "Skipping location handler with bad root.";
-                BOOST_LOG_TRIVIAL(info) << loc_items->ToString(0);
-                continue;
+        // Build argument map from config block
+        std::map<std::string, std::string> args;
+        for (const auto& [key, stmts] : location_configs) {
+            for (const auto& stmt : stmts) {
+                if (stmt->tokens_.size() == 2) {
+                    args[key] = stmt->tokens_.at(1);
+                }
             }
+        }
 
-            payload.handlers.push_back(
-                std::make_shared<StaticFileHandler>(serving_path, root.at(1)));
-
-        } else {
-            BOOST_LOG_TRIVIAL(warning)
-                << "Skipping bad handler: " << handler_name << " at " << serving_path;
+        // Lookup factory in the registry
+        auto factory = HandlerRegistry::instance().get_factory(handler_name);
+        if (!factory) {
+            BOOST_LOG_TRIVIAL(warning) << "Unknown handler: " << handler_name;
             continue;
         }
-    }
 
-    if (payload.handlers.empty()) {
-        BOOST_LOG_TRIVIAL(warning) << "No valid handlers found. Defaulting to EchoHandler.";
-        payload.handlers.push_back(std::make_shared<EchoHandler>("/"));
-    }
+        try {
+            auto handler = factory(serving_path, args);
+            payload.handlers.push_back(handler);
+            BOOST_LOG_TRIVIAL(info) << "Handler created: " << handler_name << " at " << serving_path;
+        } catch (const std::exception& e) {
+            BOOST_LOG_TRIVIAL(error) << "Handler creation failed: " << handler_name
+                                    << " at " << serving_path
+                                    << ". Reason: " << e.what();
+            continue;
+        }
+            }
 
-    return payload;
-}
+            if (payload.handlers.empty()) {
+                BOOST_LOG_TRIVIAL(warning) << "No valid handlers found. Defaulting to EchoHandler.";
+                auto factory = HandlerRegistry::instance().get_factory("EchoHandler");
+                if (factory) {
+                    payload.handlers.push_back(factory("/", {}));
+                }
+            }
+
+            return payload;
+        }
 
 /// @brief unfolds one level of an Nginx statement such that the result
 /// @brief 1. can be looked up easily by key

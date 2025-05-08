@@ -8,10 +8,15 @@
 
 class StaticFileHandler : public RequestHandler {
    public:
-    StaticFileHandler(const std::string &path_prefix, const std::string &base_dir);
+    StaticFileHandler(const std::string &path_prefix, const std::map<std::string, std::string>& args);
 
-    HttpResponse HandleRequest(const HttpRequest &request) override;
-    bool CanHandle(const std::string &path) const override;
+    std::shared_ptr<HttpResponse> handle_request(const HttpRequest &request) override;
+    bool can_handle(const std::string& path) const override {
+        return path == path_prefix_ || 
+           (path.size() > path_prefix_.size() &&
+            path.compare(0, path_prefix_.size(), path_prefix_) == 0 &&
+            path[path_prefix_.size()] == '/'); 
+    }
 
    private:
     std::string path_prefix_;
@@ -21,13 +26,13 @@ class StaticFileHandler : public RequestHandler {
     static std::map<std::string, std::string> mime_types_;
 
     // Get the MIME type based on file extension
-    std::string GetMimeType(const std::string &file_path) const;
+    std::string get_mime_type(const std::string &file_path) const;
 
     // Read a file from the filesystem
-    std::string ReadFile(const std::string &file_path, bool &success) const;
+    std::string read_file(const std::string &file_path, bool &success) const;
 
     // Check if a path is safe (doesn't escape the base directory)
-    bool IsPathSafe(const std::string &path) const;
+    bool is_path_safe(const std::string &path) const;
 };
 
 #endif  // STATIC_FILE_HANDLER_H

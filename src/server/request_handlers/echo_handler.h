@@ -5,10 +5,15 @@
 
 class EchoHandler : public RequestHandler {
    public:
-    EchoHandler(const std::string &path_prefix);
+    EchoHandler(const std::string &path_prefix, const std::map<std::string, std::string>& args);
 
-    HttpResponse HandleRequest(const HttpRequest &request) override;
-    bool CanHandle(const std::string &path) const override;
+    std::shared_ptr<HttpResponse> handle_request(const HttpRequest& request) override;
+    bool can_handle(const std::string& path) const override {
+        return path == path_prefix_ || 
+           (path.size() > path_prefix_.size() &&
+            path.compare(0, path_prefix_.size(), path_prefix_) == 0 &&
+            path[path_prefix_.size()] == '/'); 
+    }
 
    private:
     std::string path_prefix_;

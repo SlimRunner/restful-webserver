@@ -24,8 +24,12 @@
 #include "server/tagged_exceptions.h"
 
 using namespace boost::placeholders;
+extern volatile int force_link_echo_handler;
+extern volatile int force_link_static_handler;
 
 int main(int argc, char *argv[]) {
+    (void)force_link_echo_handler;
+    (void)force_link_static_handler;
     try {
         init_logging();
 
