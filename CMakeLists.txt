@@ -48,6 +48,11 @@ add_library(config_parser
     src/config/config_parser.cc
 )
 
+# startup utilities
+add_library(startup_utils
+    src/server/startup_utils.cc
+)
+
 # Add request handlers library
 add_library(request_handlers
   src/server/request_handlers/request_handler.cc
@@ -59,6 +64,7 @@ add_library(request_handlers
 add_library(logger
   src/util/logger.cc
 )
+
 # Connected and linked the server components to Boost
 include_directories(
     src/server
@@ -74,11 +80,27 @@ add_executable(webserver
 add_library(server_logic
   src/server/server.cc
   src/server/session.cc
+  src/server/tagged_exceptions.cc
 )
+
 # Reformating to  fit in screen. Adding
 target_link_libraries(webserver
   Boost::system
   # Adding log_setup and log as dependencies
+  Boost::log_setup
+  Boost::log
+  Boost::regex
+  Boost::thread
+  Boost::filesystem
+  Boost::date_time
+  server_logic
+  config_parser
+  request_handlers
+  logger
+  startup_utils
+)
+target_link_libraries(startup_utils
+  Boost::system
   Boost::log_setup
   Boost::log
   Boost::regex
@@ -99,6 +121,12 @@ target_link_libraries(server_logic
   Boost::thread
   Boost::filesystem
   Boost::date_time
+)
+# added logging to consig_parser
+target_link_libraries(config_parser
+  logger
+  Boost::log_setup
+  Boost::log
 )
 
 # Adding Unit test for config_parser
@@ -126,6 +154,8 @@ set(SERVER_TEST_SOURCES
   src/server/tests/request_handler_test.cc
   src/server/tests/echo_handler_test.cc
   src/server/tests/static_file_handler_test.cc
+  src/server/tests/tagged_exceptions_test.cc
+  src/server/tests/startup_utils_test.cc
   # Add more test libraries here
 )
 
@@ -145,6 +175,7 @@ foreach(test_src ${SERVER_TEST_SOURCES})
     gmock_main
     server_logic
     request_handlers
+    startup_utils
   )
 
   gtest_discover_tests(${test_name})
@@ -175,6 +206,6 @@ add_test(
 # Add code coverage report
 include(cmake/CodeCoverageReportConfig.cmake)
 generate_coverage_report(
-    TARGETS webserver config_parser server_logic request_handlers
+    TARGETS webserver config_parser server_logic request_handlers startup_utils
     TESTS config_parser_test ${SERVER_TEST_NAMES}
 )

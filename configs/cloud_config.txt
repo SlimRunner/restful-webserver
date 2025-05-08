@@ -1,12 +1,10 @@
-listen 80;
+port 80;
 
 # Echo handler for /echo path
-/echo {
-    handler EchoHandler;
+location /echo EchoHandler { # no arguments
 }
 
 # Static file handler for /static path
-/static {
-    handler StaticHandler;
+location /static StaticHandler {
     root ./static;
 }

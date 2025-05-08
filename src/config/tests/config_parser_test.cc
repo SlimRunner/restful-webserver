@@ -231,3 +231,36 @@ TEST(ConfigParserTest, ToStringNestedBlockIndentation) {
 
     EXPECT_NE(output.find("  listen 80;"), std::string::npos);  // 2-space indent
 }
+
+// Tests that ToString correctly indents nested block content when depth > 0
+TEST(ConfigParserTest, EmptyBlockAllowed) {
+    std::istringstream config_stream("server { }");
+    NginxConfigParser parser;
+    NginxConfig out_config;
+
+    ASSERT_TRUE(parser.Parse(&config_stream, &out_config));
+
+    EXPECT_TRUE(parser.Parse(&config_stream, &out_config));
+    EXPECT_EQ(out_config.statements_.size(), 1);
+    const auto& child_block = out_config.statements_.at(0)->child_block_;
+    EXPECT_NE(child_block, nullptr);
+    EXPECT_TRUE(child_block->statements_.empty());
+}
+
+// Tests that ToString correctly indents nested block content when depth > 0
+TEST(ConfigParserTest, DoubleSlashCommentsNotAllowed) {
+    std::istringstream config_stream("port 80; // bad comment");
+    NginxConfigParser parser;
+    NginxConfig out_config;
+
+    ASSERT_FALSE(parser.Parse(&config_stream, &out_config));
+}
+
+// Tests that ToString correctly indents nested block content when depth > 0
+TEST(ConfigParserTest, SlashStarCommentsNotAllowed) {
+    std::istringstream config_stream("port 80; /* bad comment */");
+    NginxConfigParser parser;
+    NginxConfig out_config;
+
+    ASSERT_FALSE(parser.Parse(&config_stream, &out_config));
+}
