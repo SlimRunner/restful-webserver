@@ -16,6 +16,9 @@ RUN ctest --output-on_failure
 # Define deploy stage
 FROM ubuntu:noble AS deploy
 
+# Set the working directory to /usr/src/project
+WORKDIR /usr/src/project
+
 # set default config file (local)
 ARG CONFIG_FILE=server_config.txt
 # make sure it is added to the environment

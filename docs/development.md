@@ -92,6 +92,17 @@ docker build -f ./docker/Dockerfile -t tutututu-maxverstappen:latest .
 
 After this, you should see two images in your Docker. One is tagged `base`, and the other one is tagged `latest`.
 
+> NOTE: if re-running this to refresh image does not work append `--no-cache` after `docker build` to the above commands.
+
+If you are forced to do this, remember to cleanup dangling images.
+```sh
+docker image prune
+```
+You can see what images are active with this command
+```sh
+docker images
+```
+
 #### Run the Web Server
 The moment of truth. Run this command:
 ```sh
