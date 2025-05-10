@@ -1,8 +1,8 @@
 #include "../request_handlers/request_handler.h"
-#include "../request_handlers/handler_registry.h"
 
 #include <sstream>
 
+#include "../request_handlers/handler_registry.h"
 #include "gtest/gtest.h"
 
 // test that the handler status default: 500 Internal Server Error

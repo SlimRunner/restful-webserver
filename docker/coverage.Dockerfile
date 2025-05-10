@@ -6,7 +6,7 @@ FROM tutututu-maxverstappen:base AS builder
 COPY . /usr/src/project
 WORKDIR /usr/src/project/build
 
-# Build 
+# Build
 RUN cmake ..
 RUN make
 

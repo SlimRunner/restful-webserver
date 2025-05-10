@@ -5,15 +5,14 @@
 
 volatile int force_link_echo_handler = 0;
 
-
 /*
 Constructs an EchoHandler for requests matching the given path prefix.
 - path_prefix: the URL prefix this handler will respond to (e.g. "/echo").
 - map essentially takes all the rest of the configs (e.g. "root: /file")
   this then puts it into a map for fast access
 */
-EchoHandler::EchoHandler(const std::string &path_prefix, 
-                         const std::map<std::string, std::string>& /*args*/) 
+EchoHandler::EchoHandler(const std::string &path_prefix,
+                         const std::map<std::string, std::string> & /*args*/)
     : path_prefix_(path_prefix) {}
 
 /*
@@ -50,11 +49,10 @@ std::shared_ptr<HttpResponse> EchoHandler::handle_request(const HttpRequest &req
     return response;
 }
 
-bool EchoHandler::can_handle(const std::string& path) const {
-    return path == path_prefix_ || 
-        (path.size() > path_prefix_.size() &&
-        path.compare(0, path_prefix_.size(), path_prefix_) == 0 &&
-        path[path_prefix_.size()] == '/'); 
+bool EchoHandler::can_handle(const std::string &path) const {
+    return path == path_prefix_ || (path.size() > path_prefix_.size() &&
+                                    path.compare(0, path_prefix_.size(), path_prefix_) == 0 &&
+                                    path[path_prefix_.size()] == '/');
 }
 
 std::string EchoHandler::get_prefix() const {
@@ -62,7 +60,7 @@ std::string EchoHandler::get_prefix() const {
 }
 /*
 This program is ran at startup, before main()
-It lets the registry know that if we need EchoHandler it will start building it 
+It lets the registry know that if we need EchoHandler it will start building it
 */
 #include "handler_registry.h"
 REGISTER_HANDLER_WITH_NAME(EchoHandler, "EchoHandler")

@@ -1,10 +1,10 @@
 #include "../request_handlers/echo_handler.h"
-#include "../request_handlers/handler_registry.h"
 
 #include <array>
-#include <sstream>
 #include <memory>
+#include <sstream>
 
+#include "../request_handlers/handler_registry.h"
 #include "gtest/gtest.h"
 
 // tests that the handler can handle valid paths of different lengths
@@ -34,7 +34,7 @@ TEST(EchoHandlerTest, CanHandleBadPrefixes) {
 
 // tests that the handler correctly generates a GET response
 TEST(EchoHandlerTest, HandleGetRequestEchoesRequest) {
-    EchoHandler eHandler("/echo",{});
+    EchoHandler eHandler("/echo", {});
     HttpRequest req;
     req.method = "GET";
     req.path = "/echo/path";
@@ -63,7 +63,7 @@ TEST(EchoHandlerTest, HandleGetRequestEchoesRequest) {
 
 // tests that the handler correctly rejects any non-GET request
 TEST(EchoHandlerTest, RejectsNonGet) {
-    EchoHandler eHandler("/echo",{});
+    EchoHandler eHandler("/echo", {});
     HttpRequest req;
     req.path = "/echo";
     req.version = "HTTP/1.1";

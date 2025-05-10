@@ -16,6 +16,6 @@ RUN apt-get update && apt-get install -y \
     libgmock-dev \
     libgtest-dev \
     netcat-openbsd \
-    # adding gcovr to build coverage report and have 
+    # adding gcovr to build coverage report and have
     # summary appear in the build logs
     gcovr

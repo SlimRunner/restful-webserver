@@ -24,7 +24,7 @@
     NAME: web-server
     ZONE: us-west1-a
     MACHINE_TYPE: e2-micro
-    PREEMPTIBLE: 
+    PREEMPTIBLE:
     INTERNAL_IP: # removed for safety
     EXTERNAL_IP: # removed for safety
     STATUS: RUNNING

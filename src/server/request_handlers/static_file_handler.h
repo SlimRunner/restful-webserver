@@ -8,11 +8,13 @@
 
 class StaticFileHandler : public RequestHandler {
    public:
-    StaticFileHandler(const std::string &path_prefix, const std::map<std::string, std::string>& args);
+    StaticFileHandler(const std::string &path_prefix,
+                      const std::map<std::string, std::string> &args);
 
     std::shared_ptr<HttpResponse> handle_request(const HttpRequest &request) override;
-    bool can_handle(const std::string& path) const override;
+    bool can_handle(const std::string &path) const override;
     std::string get_prefix() const override;
+
    private:
     std::string path_prefix_;
     std::string base_dir_;

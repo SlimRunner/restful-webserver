@@ -164,7 +164,7 @@ void session::handle_read(const boost::system::error_code &error, size_t bytes_t
 
         for (auto &handler : handlers_) {
             if (handler->can_handle(request.path)) {
-                const std::string& prefix = handler->get_prefix();  // You might need to expose this
+                const std::string &prefix = handler->get_prefix();  // You might need to expose this
                 if (prefix.length() > longest_match_len) {
                     best_handler = handler;
                     longest_match_len = prefix.length();
@@ -174,11 +174,10 @@ void session::handle_read(const boost::system::error_code &error, size_t bytes_t
 
         if (best_handler) {
             BOOST_LOG_TRIVIAL(debug) << "Handler matched for path: " << request.path
-                                         << " using handler type: " << typeid(*best_handler).name();
+                                     << " using handler type: " << typeid(*best_handler).name();
             response = *best_handler->handle_request(request);
             handled = true;
         }
-
 
         // If no handler was found, return a 404 Not Found response
         if (!handled) {

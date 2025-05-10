@@ -61,12 +61,12 @@ class SessionTest : public ::testing::Test {
                 res->body = "mock";
                 if (req.method == "GET") {
                     res->status = StatusCode::OK;
-                }else{
+                } else {
                     res->status = StatusCode::BAD_REQUEST;
                 }
                 res->headers["Content-Type"] = "text/plain";
                 res->headers["Content-Length"] = std::to_string(res->body.size());
-                return res;  
+                return res;
             }));
     }
 
@@ -215,11 +215,9 @@ TEST_F(SessionTest, HandleReadCompleteRequest) {
         "\r\n"
         "mock";
 
-    //Tell the mock to claim this path
-    EXPECT_CALL(*mock_handler_, can_handle("/echo"))
-        .WillOnce(testing::Return(true));
-    EXPECT_CALL(*mock_handler_, handle_request(testing::_))
-        .Times(1);
+    // Tell the mock to claim this path
+    EXPECT_CALL(*mock_handler_, can_handle("/echo")).WillOnce(testing::Return(true));
+    EXPECT_CALL(*mock_handler_, handle_request(testing::_)).Times(1);
 
     session_->set_request(fullReq);
     session_->handle_read(successCode, fullReq.size());
@@ -250,18 +248,15 @@ TEST_F(SessionTest, HandleMultipleRequests) {
         "Host: localhost\r\n\r\n";
     boost::system::error_code successCode{};
     const std::string mockRes =
-       "HTTP/1.1 200 OK\r\n"
+        "HTTP/1.1 200 OK\r\n"
         "Connection: keep-alive\r\n"
         "Content-Length: 4\r\n"
         "Content-Type: text/plain\r\n"
         "\r\n"
         "mock";
-        
-    EXPECT_CALL(*mock_handler_, can_handle("/echo"))
-        .Times(2)
-        .WillRepeatedly(testing::Return(true));
-    EXPECT_CALL(*mock_handler_, handle_request(testing::_))
-        .Times(2);  // Two requests
+
+    EXPECT_CALL(*mock_handler_, can_handle("/echo")).Times(2).WillRepeatedly(testing::Return(true));
+    EXPECT_CALL(*mock_handler_, handle_request(testing::_)).Times(2);  // Two requests
     session_->set_request(fullReq);
     session_->handle_read(successCode, fullReq.size());
     EXPECT_FALSE(session_->already_deleted_);
@@ -287,7 +282,7 @@ TEST_F(SessionTest, HandleBadVersionRequest) {
     EXPECT_EQ(session_->current_response_, actualRes);
 }
 
-// This tests the longest matching prefix 
+// This tests the longest matching prefix
 // Using a mockhandler to achieve this by maching a handler take the paths
 TEST_F(SessionTest, PicksLongestMatchingPrefix) {
     auto mock_handler_long = std::make_shared<MockHandler>();
@@ -298,19 +293,15 @@ TEST_F(SessionTest, PicksLongestMatchingPrefix) {
         new TestableSession(io_service_, handlers_), session_deleter());
 
     // Short prefix handler
-    EXPECT_CALL(*mock_handler_, can_handle("/echo/long/path"))
-        .WillOnce(testing::Return(true));
-    EXPECT_CALL(*mock_handler_, get_prefix())
-        .WillOnce(testing::Return("/echo"));
+    EXPECT_CALL(*mock_handler_, can_handle("/echo/long/path")).WillOnce(testing::Return(true));
+    EXPECT_CALL(*mock_handler_, get_prefix()).WillOnce(testing::Return("/echo"));
 
     // Longer prefix handler
-    EXPECT_CALL(*mock_handler_long, can_handle("/echo/long/path"))
-        .WillOnce(testing::Return(true));
-    EXPECT_CALL(*mock_handler_long, get_prefix())
-        .WillOnce(testing::Return("/echo/long"));
+    EXPECT_CALL(*mock_handler_long, can_handle("/echo/long/path")).WillOnce(testing::Return(true));
+    EXPECT_CALL(*mock_handler_long, get_prefix()).WillOnce(testing::Return("/echo/long"));
     EXPECT_CALL(*mock_handler_long, handle_request(testing::_))
         .Times(1)
-        .WillOnce(testing::Invoke([](const HttpRequest& req) {
+        .WillOnce(testing::Invoke([](const HttpRequest &req) {
             auto res = std::make_shared<HttpResponse>();
             res->status = StatusCode::OK;
             res->body = "matched long";
@@ -341,14 +332,11 @@ TEST_F(SessionTest, PrefixShadowing_EchoDoesNotMatchEchoes) {
         new TestableSession(io_service_, handlers_), session_deleter());
 
     // Only the shadowed handler claims `/echoes`, but not `/echo`
-    EXPECT_CALL(*mock_handler_, can_handle("/echoes"))
-        .WillOnce(testing::Return(false));
-    EXPECT_CALL(*shadowed_handler, can_handle("/echoes"))
-        .WillOnce(testing::Return(true));
-    EXPECT_CALL(*shadowed_handler, get_prefix())
-        .WillOnce(testing::Return("/echoes"));
+    EXPECT_CALL(*mock_handler_, can_handle("/echoes")).WillOnce(testing::Return(false));
+    EXPECT_CALL(*shadowed_handler, can_handle("/echoes")).WillOnce(testing::Return(true));
+    EXPECT_CALL(*shadowed_handler, get_prefix()).WillOnce(testing::Return("/echoes"));
     EXPECT_CALL(*shadowed_handler, handle_request(testing::_))
-        .WillOnce(testing::Invoke([](const HttpRequest& req) {
+        .WillOnce(testing::Invoke([](const HttpRequest &req) {
             auto res = std::make_shared<HttpResponse>();
             res->status = StatusCode::OK;
             res->body = "shadowed";
@@ -369,7 +357,7 @@ TEST_F(SessionTest, PrefixShadowing_EchoDoesNotMatchEchoes) {
     EXPECT_NE(session_->current_response_.find("shadowed"), std::string::npos);
 }
 
-//No Match at All -> Should return 404
+// No Match at All -> Should return 404
 TEST_F(SessionTest, NoMatchingPrefixReturns404) {
     EXPECT_CALL(*mock_handler_, can_handle("/random"))
         .WillOnce(testing::Return(false));  // No match
@@ -386,7 +374,7 @@ TEST_F(SessionTest, NoMatchingPrefixReturns404) {
     EXPECT_NE(session_->current_response_.find("404 Not Found"), std::string::npos);
 }
 
-//Tie on Prefix Length choosing the first one wins (or deterministic winner)
+// Tie on Prefix Length choosing the first one wins (or deterministic winner)
 TEST_F(SessionTest, SameLengthPrefixPicksFirstRegistered) {
     auto second_handler = std::make_shared<MockHandler>();
     handlers_.push_back(second_handler);
@@ -395,18 +383,14 @@ TEST_F(SessionTest, SameLengthPrefixPicksFirstRegistered) {
         new TestableSession(io_service_, handlers_), session_deleter());
 
     // Both claim same-length prefix
-    EXPECT_CALL(*mock_handler_, can_handle("/tie"))
-        .WillOnce(testing::Return(true));
-    EXPECT_CALL(*mock_handler_, get_prefix())
-        .WillOnce(testing::Return("/tie"));
+    EXPECT_CALL(*mock_handler_, can_handle("/tie")).WillOnce(testing::Return(true));
+    EXPECT_CALL(*mock_handler_, get_prefix()).WillOnce(testing::Return("/tie"));
 
-    EXPECT_CALL(*second_handler, can_handle("/tie"))
-        .WillOnce(testing::Return(true));
-    EXPECT_CALL(*second_handler, get_prefix())
-        .WillOnce(testing::Return("/tie"));
+    EXPECT_CALL(*second_handler, can_handle("/tie")).WillOnce(testing::Return(true));
+    EXPECT_CALL(*second_handler, get_prefix()).WillOnce(testing::Return("/tie"));
 
     EXPECT_CALL(*mock_handler_, handle_request(testing::_))
-        .WillOnce(testing::Invoke([](const HttpRequest& req) {
+        .WillOnce(testing::Invoke([](const HttpRequest &req) {
             auto res = std::make_shared<HttpResponse>();
             res->status = StatusCode::OK;
             res->body = "first wins";

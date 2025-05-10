@@ -3,17 +3,17 @@
 #include <boost/log/trivial.hpp>
 #include <set>
 
+#include "handler_registry.h"
 #include "logger.h"
 #include "server.h"
 #include "tagged_exceptions.h"
-#include "handler_registry.h"
 
 using nginx_shared_statement = std::shared_ptr<NginxConfigStatement>;
 using leaf_config_map = std::map<std::string, std::vector<std::vector<std::string>>>;
 using nested_config_map = std::map<std::string, std::vector<nginx_shared_statement>>;
 using nginx_config_map = std::map<std::string, std::vector<nginx_shared_statement>>;
 
-//This forces the link, to add more handlers forcing a link here is necessary
+// This forces the link, to add more handlers forcing a link here is necessary
 extern volatile int force_link_echo_handler;
 extern volatile int force_link_static_handler;
 
@@ -35,7 +35,7 @@ std::optional<config_payload> parse_config(std::string filepath) {
     constexpr auto PORT_KEY = "port";
     constexpr auto LOCATION_KEY = "location";
 
-    //These lines force the linking between the parser and the handlers mainly for testing 
+    // These lines force the linking between the parser and the handlers mainly for testing
     (void)force_link_echo_handler;
     (void)force_link_static_handler;
 
@@ -111,8 +111,8 @@ std::optional<config_payload> parse_config(std::string filepath) {
 
         // Build argument map from config block
         std::map<std::string, std::string> args;
-        for (const auto& [key, stmts] : location_configs) {
-            for (const auto& stmt : stmts) {
+        for (const auto &[key, stmts] : location_configs) {
+            for (const auto &stmt : stmts) {
                 if (stmt->tokens_.size() == 2) {
                     args[key] = stmt->tokens_.at(1);
                 }
@@ -129,25 +129,25 @@ std::optional<config_payload> parse_config(std::string filepath) {
         try {
             auto handler = factory(serving_path, args);
             payload.handlers.push_back(handler);
-            BOOST_LOG_TRIVIAL(info) << "Handler created: " << handler_name << " at " << serving_path;
-        } catch (const std::exception& e) {
-            BOOST_LOG_TRIVIAL(error) << "Handler creation failed: " << handler_name
-                                    << " at " << serving_path
-                                    << ". Reason: " << e.what();
+            BOOST_LOG_TRIVIAL(info)
+                << "Handler created: " << handler_name << " at " << serving_path;
+        } catch (const std::exception &e) {
+            BOOST_LOG_TRIVIAL(error) << "Handler creation failed: " << handler_name << " at "
+                                     << serving_path << ". Reason: " << e.what();
             continue;
         }
-            }
+    }
 
-            if (payload.handlers.empty()) {
-                BOOST_LOG_TRIVIAL(warning) << "No valid handlers found. Defaulting to EchoHandler.";
-                auto factory = HandlerRegistry::instance().get_factory("EchoHandler");
-                if (factory) {
-                    payload.handlers.push_back(factory("/", {}));
-                }
-            }
-
-            return payload;
+    if (payload.handlers.empty()) {
+        BOOST_LOG_TRIVIAL(warning) << "No valid handlers found. Defaulting to EchoHandler.";
+        auto factory = HandlerRegistry::instance().get_factory("EchoHandler");
+        if (factory) {
+            payload.handlers.push_back(factory("/", {}));
         }
+    }
+
+    return payload;
+}
 
 /// @brief unfolds one level of an Nginx statement such that the result
 /// @brief 1. can be looked up easily by key

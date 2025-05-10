@@ -1,6 +1,5 @@
 
 #include "static_file_handler.h"
-#include "echo_handler.h"
 
 #include <boost/log/trivial.hpp>
 #include <filesystem>
@@ -8,6 +7,8 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
+
+#include "echo_handler.h"
 
 volatile int force_link_static_handler = 0;
 
@@ -24,20 +25,21 @@ Constructor for StaticFileHandler.
  - path_prefix: the URL path this handler should respond to (e.g. "/static").
  - base_dir: the base directory on the filesystem to serve files from.
 */
-StaticFileHandler::StaticFileHandler(const std::string &path_prefix, const std::map<std::string, std::string>& args)
+StaticFileHandler::StaticFileHandler(const std::string &path_prefix,
+                                     const std::map<std::string, std::string> &args)
     : path_prefix_(path_prefix) {
-        auto it = args.find("root");
-        if (it != args.end()) {
-            base_dir_ = it->second;
-        } else {
-            throw std::runtime_error("StaticFileHandler requires a 'root' argument.");
-        }
+    auto it = args.find("root");
+    if (it != args.end()) {
+        base_dir_ = it->second;
+    } else {
+        throw std::runtime_error("StaticFileHandler requires a 'root' argument.");
     }
+}
 /*
 Handles an HTTP GET request by serving a file from disk.
 Returns 400 for non-GET methods, 403 for unsafe paths, and 404 if the file is missing.
 */
-std::shared_ptr<HttpResponse> StaticFileHandler::handle_request(const HttpRequest& request) {
+std::shared_ptr<HttpResponse> StaticFileHandler::handle_request(const HttpRequest &request) {
     auto response = std::make_shared<HttpResponse>();
 
     // Check if the request method is GET
@@ -223,19 +225,18 @@ std::string StaticFileHandler::read_file(const std::string &file_path, bool &suc
     return std::string(buffer.data(), size);
 }
 
-bool StaticFileHandler::can_handle(const std::string& path) const{
-        return path == path_prefix_ || 
-           (path.size() > path_prefix_.size() &&
-            path.compare(0, path_prefix_.size(), path_prefix_) == 0 &&
-            path[path_prefix_.size()] == '/'); 
-    }
+bool StaticFileHandler::can_handle(const std::string &path) const {
+    return path == path_prefix_ || (path.size() > path_prefix_.size() &&
+                                    path.compare(0, path_prefix_.size(), path_prefix_) == 0 &&
+                                    path[path_prefix_.size()] == '/');
+}
 
 std::string StaticFileHandler::get_prefix() const {
     return path_prefix_;
 }
 /*
 This program is ran at startup, before main()
-It lets the registry know that if we need StaticFileHandler it will start building it 
+It lets the registry know that if we need StaticFileHandler it will start building it
 */
 #include "handler_registry.h"
 REGISTER_HANDLER_WITH_NAME(StaticFileHandler, "StaticHandler")

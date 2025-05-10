@@ -3,10 +3,10 @@
 #include <boost/filesystem.hpp>
 #include <fstream>
 #include <functional>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
-#include <memory>
 
 #include "gtest/gtest.h"
 
@@ -131,7 +131,8 @@ TEST_F(StaticFileHandlerText, HandleRequestWithAllFiles) {
     const std::string PREFIX = "/base";
     auto handler = getHandler(PREFIX);
     for (const auto &file : createDefaultFiles()) {
-        std::shared_ptr<HttpResponse> response = handler.handle_request(getRequest("GET", PREFIX + "/" + file.first));
+        std::shared_ptr<HttpResponse> response =
+            handler.handle_request(getRequest("GET", PREFIX + "/" + file.first));
         EXPECT_EQ(response->status, StatusCode::OK);
         EXPECT_EQ(response->body, file.second);
     }

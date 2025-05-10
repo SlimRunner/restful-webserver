@@ -25,8 +25,8 @@ This is a cloud-deployed web server used for the purpose of learning software en
 * [Bookmarks](https://marketplace.visualstudio.com/items/?itemName=alefragnani.Bookmarks)
   * `ctrl+k` to add bookmarks, `ctrl+l` to go to the next one.
 * [Black Formatter](https://marketplace.visualstudio.com/items/?itemName=ms-python.black-formatter)
-* [Git Graph](https://marketplace.visualstudio.com/items/?itemName=mhutchie.git-graph)
   *  good formatter for Python code
+* [Git Graph](https://marketplace.visualstudio.com/items/?itemName=mhutchie.git-graph)
 * [Markdown All in One](https://marketplace.visualstudio.com/items/?itemName=yzhang.markdown-all-in-one)
   * Allows you to automatically update and generate a table of contents.
 * [C++ Extension pack](https://marketplace.visualstudio.com/items/?itemName=ms-vscode.cpptools-extension-pack)
