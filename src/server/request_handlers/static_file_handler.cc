@@ -1,5 +1,6 @@
 
 #include "static_file_handler.h"
+#include "echo_handler.h"
 
 #include <boost/log/trivial.hpp>
 #include <filesystem>
@@ -222,6 +223,16 @@ std::string StaticFileHandler::read_file(const std::string &file_path, bool &suc
     return std::string(buffer.data(), size);
 }
 
+bool StaticFileHandler::can_handle(const std::string& path) const{
+        return path == path_prefix_ || 
+           (path.size() > path_prefix_.size() &&
+            path.compare(0, path_prefix_.size(), path_prefix_) == 0 &&
+            path[path_prefix_.size()] == '/'); 
+    }
+
+std::string StaticFileHandler::get_prefix() const {
+    return path_prefix_;
+}
 /*
 This program is ran at startup, before main()
 It lets the registry know that if we need StaticFileHandler it will start building it 
