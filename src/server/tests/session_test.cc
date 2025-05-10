@@ -197,23 +197,33 @@ TEST_F(SessionTest, HandleReadWithOversize) {
     EXPECT_EQ(session_->current_response_, expectedResp);
 }
 
-// // uses a mock response to test a correct handle read
-// TEST_F(SessionTest, HandleReadCompleteRequest) {
-//     std::string fullReq =
-//         "GET /echo HTTP/1.1\r\n"
-//         "Host: localhost\r\n"
-//         "Connection: close\r\n\r\n";
-//     boost::system::error_code successCode{};
-//     const std::string mockRes =
-//         "HTTP/1.1 200 OK\r\n"  // this is injected by the mock call
-//         "Connection: close\r\n\r\n"
-//         "mock";  // this is injected by the mock call
+// uses a mock response to test a correct handle read
+TEST_F(SessionTest, HandleReadCompleteRequest) {
+    std::string fullReq =
+        "GET /echo HTTP/1.1\r\n"
+        "Host: localhost\r\n"
+        "Connection: close\r\n\r\n";
+    boost::system::error_code successCode{};
+    const std::string mockRes =
+        "HTTP/1.1 200 OK\r\n"
+        "Connection: close\r\n"
+        "Content-Length: 4\r\n"
+        "Content-Type: text/plain\r\n"
+        "\r\n"
+        "mock";
 
-//     session_->set_request(fullReq);
-//     session_->handle_read(successCode, fullReq.size());
-//     EXPECT_FALSE(session_->already_deleted_);
-//     EXPECT_EQ(session_->current_response_, mockRes);
-// }
+    //Tell the mock to claim this path
+    EXPECT_CALL(*mock_handler_, can_handle("/echo"))
+        .WillOnce(testing::Return(true));
+    EXPECT_CALL(*mock_handler_, handle_request(testing::_))
+        .Times(1);
+
+    session_->set_request(fullReq);
+    session_->handle_read(successCode, fullReq.size());
+
+    EXPECT_FALSE(session_->already_deleted_);
+    EXPECT_EQ(session_->current_response_, mockRes);
+}
 
 // uses a mock response to test not handled (404)
 TEST_F(SessionTest, HandleReadUnhandledRequest) {
@@ -228,24 +238,32 @@ TEST_F(SessionTest, HandleReadUnhandledRequest) {
     EXPECT_NE(session_->current_response_.find("404 Not Found"), std::string::npos);
 }
 
-// // uses a mock response to test multiple requests
-// TEST_F(SessionTest, HandleMultipleRequests) {
-//     std::string fullReq =
-//         "GET /echo HTTP/1.1\r\n"
-//         "Host: localhost\r\n\r\n"
-//         "GET /echo HTTP/1.1\r\n"
-//         "Host: localhost\r\n\r\n";
-//     boost::system::error_code successCode{};
-//     const std::string mockRes =
-//         "HTTP/1.1 200 OK\r\n"  // this is injected by the mock call
-//         "Connection: keep-alive\r\n\r\n"
-//         "mock";  // this is injected by the mock call
-
-//     session_->set_request(fullReq);
-//     session_->handle_read(successCode, fullReq.size());
-//     EXPECT_FALSE(session_->already_deleted_);
-//     EXPECT_EQ(session_->current_response_, mockRes);
-// }
+// uses a mock response to test multiple requests
+TEST_F(SessionTest, HandleMultipleRequests) {
+    std::string fullReq =
+        "GET /echo HTTP/1.1\r\n"
+        "Host: localhost\r\n\r\n"
+        "GET /echo HTTP/1.1\r\n"
+        "Host: localhost\r\n\r\n";
+    boost::system::error_code successCode{};
+    const std::string mockRes =
+       "HTTP/1.1 200 OK\r\n"
+        "Connection: keep-alive\r\n"
+        "Content-Length: 4\r\n"
+        "Content-Type: text/plain\r\n"
+        "\r\n"
+        "mock";
+        
+    EXPECT_CALL(*mock_handler_, can_handle("/echo"))
+        .Times(2)
+        .WillRepeatedly(testing::Return(true));
+    EXPECT_CALL(*mock_handler_, handle_request(testing::_))
+        .Times(2);  // Two requests
+    session_->set_request(fullReq);
+    session_->handle_read(successCode, fullReq.size());
+    EXPECT_FALSE(session_->already_deleted_);
+    EXPECT_EQ(session_->current_response_, mockRes);
+}
 
 // tests that it fails when not HTTP1.1
 TEST_F(SessionTest, HandleBadVersionRequest) {

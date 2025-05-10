@@ -55,7 +55,7 @@ add_library(startup_utils
 
 # Add request handlers library
 add_library(request_handlers
-  src/server/request_handlers/request_handler.cc
+    src/server/request_handlers/request_handler.cc
     src/server/request_handlers/echo_handler.cc
     src/server/request_handlers/static_file_handler.cc
 )
