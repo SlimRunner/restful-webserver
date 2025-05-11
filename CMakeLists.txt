@@ -72,6 +72,7 @@ include_directories(
     src/server/tests
     src/server/request_handlers
     src/util
+    tests/
 )
 add_executable(webserver
     src/server_main.cc
@@ -131,7 +132,7 @@ target_link_libraries(config_parser
 
 # Adding Unit test for config_parser
 add_executable(config_parser_test
-  src/config/tests/config_parser_test.cc
+  tests/config/config_parser_test.cc
 )
 target_link_libraries(config_parser_test
   config_parser
@@ -140,8 +141,9 @@ target_link_libraries(config_parser_test
 )
 
 # Define macro to access file path from code (for SimpleConfig test)
+# DO NOT put files among the tests put them in common_files
 target_compile_definitions(config_parser_test PRIVATE
-  TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src/config/tests"
+  TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/common_files"
 )
 
 gtest_discover_tests(config_parser_test)
@@ -149,13 +151,13 @@ gtest_discover_tests(config_parser_test)
 
 # only add tests that all share same target_link_libraries
 set(SERVER_TEST_SOURCES
-  src/server/tests/server_test.cc
-  src/server/tests/session_test.cc
-  src/server/tests/request_handler_test.cc
-  src/server/tests/echo_handler_test.cc
-  src/server/tests/static_file_handler_test.cc
-  src/server/tests/tagged_exceptions_test.cc
-  src/server/tests/startup_utils_test.cc
+  tests/server/server_test.cc
+  tests/server/session_test.cc
+  tests/server/request_handlers/request_handler_test.cc
+  tests/server/request_handlers/echo_handler_test.cc
+  tests/server/request_handlers/static_file_handler_test.cc
+  tests/server/tagged_exceptions_test.cc
+  tests/server/startup_utils_test.cc
   # Add more test libraries here
 )
 
@@ -183,14 +185,16 @@ endforeach()
 
 
 # Copy the integration test script to the build directory
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/src/server/tests/integration_test.py
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tests/integration_test.py
      DESTINATION ${CMAKE_BINARY_DIR}
      FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
+# allows integration test to access our actual config
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/configs/server_config.txt
      DESTINATION ${CMAKE_BINARY_DIR}
      FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ)
 
+# allows integration test to access our real static files
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/static
      DESTINATION ${CMAKE_BINARY_DIR}
      FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ)
@@ -202,6 +206,10 @@ add_test(
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
 
+# Add environment variable for Python integration tests to access common files
+set_tests_properties(integration_test PROPERTIES
+  ENVIRONMENT "TEST_DATA_DIR=${CMAKE_CURRENT_SOURCE_DIR}/tests/common_files"
+)
 
 # Add code coverage report
 include(cmake/CodeCoverageReportConfig.cmake)

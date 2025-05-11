@@ -9,6 +9,9 @@ import os
 import socket
 from logging.handlers import RotatingFileHandler
 
+# use this variable as root for what is in tests/common_files
+test_data_dir = os.environ.get("TEST_DATA_DIR")
+
 
 class HTTPServerTestCase(unittest.TestCase):
     """
@@ -214,6 +217,10 @@ class IntegrationTests(HTTPServerTestCase):
     STDERR_FILE = "integration_test_logs/server_stderr.log"
     TESTLOG_FILE = "integration_test_logs/server_test.log"
     STARTUP_DELAY = 2  # seconds to wait after starting server
+
+    def test_common_data_dir(self):
+        self._logger.info(f"common file path: {test_data_dir}")
+        self.assertTrue(os.path.exists(test_data_dir))
 
     def test_echo(self):
         status, reason, headers, body = self.send_request(

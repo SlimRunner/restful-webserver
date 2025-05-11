@@ -1,4 +1,4 @@
-#include "../startup_utils.h"
+#include "startup_utils.h"
 
 #include <array>
 #include <boost/filesystem.hpp>

@@ -1,11 +1,11 @@
-#include "../request_handlers/echo_handler.h"
+#include "echo_handler.h"
 
 #include <array>
 #include <memory>
 #include <sstream>
 
-#include "../request_handlers/handler_registry.h"
 #include "gtest/gtest.h"
+#include "handler_registry.h"
 
 // tests that the handler can handle valid paths of different lengths
 TEST(EchoHandlerTest, CanHandleGoodPrefixes) {

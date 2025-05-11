@@ -1,4 +1,4 @@
-#include "../request_handlers/static_file_handler.h"
+#include "static_file_handler.h"
 
 #include <boost/filesystem.hpp>
 #include <fstream>
