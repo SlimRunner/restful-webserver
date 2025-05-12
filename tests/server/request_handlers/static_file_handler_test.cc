@@ -107,7 +107,7 @@ TEST_F(StaticFileHandlerText, HandleRequestWithAllFiles) {
     const std::string PREFIX = "/base";
     auto handler = getHandler(PREFIX);
     for (const auto &file : createDefaultFiles()) {
-        std::shared_ptr<HttpResponse> response =
+        std::unique_ptr<HttpResponse> response =
             handler.handle_request(getRequest("GET", PREFIX + "/" + file.first));
         EXPECT_EQ(response->status, StatusCode::OK);
         EXPECT_EQ(response->body, file.second);
@@ -119,7 +119,7 @@ TEST_F(StaticFileHandlerText, HandleRequestWithNonExistentFile) {
     const std::string PREFIX = "/base";
     const std::string FILEPATH = PREFIX + "/non-existent.txt";
     auto handler = getHandler(PREFIX);
-    std::shared_ptr<HttpResponse> response = handler.handle_request(getRequest("GET", FILEPATH));
+    std::unique_ptr<HttpResponse> response = handler.handle_request(getRequest("GET", FILEPATH));
     EXPECT_EQ(response->status, StatusCode::NOT_FOUND);
     EXPECT_EQ(response->body, "404 Not Found");
 }
@@ -134,7 +134,7 @@ TEST_F(StaticFileHandlerText, HandleRequestWithBadRequest) {
     // make sure the fixture has at least one test
     EXPECT_FALSE(files.empty());
 
-    std::shared_ptr<HttpResponse> response = handler.handle_request(getRequest("POST", FILEPATH));
+    std::unique_ptr<HttpResponse> response = handler.handle_request(getRequest("POST", FILEPATH));
     EXPECT_EQ(response->status, StatusCode::BAD_REQUEST);
     EXPECT_EQ(response->body, "");
 }
@@ -148,7 +148,7 @@ TEST_F(StaticFileHandlerText, HandleRequestAttemptBacktracking) {
     auto handler = getHandler(PREFIX);
 
     auto request = getRequest("GET", FILEPATH);
-    std::shared_ptr<HttpResponse> response = handler.handle_request(request);
+    std::unique_ptr<HttpResponse> response = handler.handle_request(request);
     EXPECT_EQ(response->status, StatusCode::FORBIDDEN);
     EXPECT_EQ(response->body, "403 Forbidden");
 }
@@ -161,7 +161,7 @@ TEST_F(StaticFileHandlerText, HandleRequestFailureWithLargeFile) {
     const std::string FILEPATH = PREFIX + "/" + files.at(0).first;
     auto handler = getHandler(PREFIX);
 
-    std::shared_ptr<HttpResponse> response = handler.handle_request(getRequest("GET", FILEPATH));
+    std::unique_ptr<HttpResponse> response = handler.handle_request(getRequest("GET", FILEPATH));
     EXPECT_EQ(response->status, StatusCode::NOT_FOUND);
     EXPECT_EQ(response->body, "404 Not Found");
 }
@@ -175,7 +175,7 @@ TEST_F(StaticFileHandlerText, CanReadFromEmptyBaseTag) {
     auto handler = getHandler(PREFIX);
 
     // should be read correctly
-    std::shared_ptr<HttpResponse> response = handler.handle_request(getRequest("GET", FILEPATH));
+    std::unique_ptr<HttpResponse> response = handler.handle_request(getRequest("GET", FILEPATH));
     EXPECT_EQ(response->status, StatusCode::OK);
     EXPECT_EQ(response->body, CONTENT);
 }

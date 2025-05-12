@@ -45,13 +45,13 @@ class MockHandler : public RequestHandler {
     MockHandler(const std::string &path_prefix, const std::map<std::string, std::string> &_)
         : path_prefix_{path_prefix} {}
 
-    std::shared_ptr<HttpResponse> handle_request(const HttpRequest &request) override {
+    std::unique_ptr<HttpResponse> handle_request(const HttpRequest &request) override {
         HttpResponse res;
         res.status = StatusCode::OK;  // Set status to 200 OK
         res.body = path_prefix_;      // Keep path prefix for verification
         res.headers["Content-Type"] = "text/plain";
         res.headers["Content-Length"] = std::to_string(res.body.size());
-        return std::make_shared<HttpResponse>(res);
+        return std::make_unique<HttpResponse>(res);
     }
 };
 

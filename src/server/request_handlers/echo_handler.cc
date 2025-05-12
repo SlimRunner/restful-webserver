@@ -19,21 +19,21 @@ EchoHandler::EchoHandler(const std::string &path_prefix,
 Handles an HTTP GET request by echoing the full request back in the response body.
 Returns 400 Bad Request if the method is not GET.
 */
-std::shared_ptr<HttpResponse> EchoHandler::handle_request(const HttpRequest &request) {
-    auto response = std::make_shared<HttpResponse>();
+std::unique_ptr<HttpResponse> EchoHandler::handle_request(const HttpRequest &request) {
+    HttpResponse response = {};
 
     // Check if the request method is valid (GET)
     if (request.method != "GET") {
         BOOST_LOG_TRIVIAL(warning) << "EchoHandler rejected non-GET request: " << request.method;
-        response->status = StatusCode::BAD_REQUEST;
-        response->body = "";
-        response->headers["Content-Type"] = "text/plain";
-        response->headers["Content-Length"] = "0";
-        return response;
+        response.status = StatusCode::BAD_REQUEST;
+        response.body = "";
+        response.headers["Content-Type"] = "text/plain";
+        response.headers["Content-Length"] = "0";
+        return std::make_unique<HttpResponse>(response);
     }
     BOOST_LOG_TRIVIAL(info) << "EchoHandler handling GET request for path: " << request.path;
 
-    response->status = StatusCode::OK;
+    response.status = StatusCode::OK;
 
     // Reconstruct the full request for echoing
     std::string full_request = request.method + " " + request.path + " " + request.version + "\r\n";
@@ -42,11 +42,11 @@ std::shared_ptr<HttpResponse> EchoHandler::handle_request(const HttpRequest &req
     }
     full_request += "\r\n" + request.body;
 
-    response->body = full_request;
-    response->headers["Content-Type"] = "text/plain";
-    response->headers["Content-Length"] = std::to_string(response->body.size());
+    response.body = full_request;
+    response.headers["Content-Type"] = "text/plain";
+    response.headers["Content-Length"] = std::to_string(response.body.size());
 
-    return response;
+    return std::make_unique<HttpResponse>(response);
 }
 
 /*

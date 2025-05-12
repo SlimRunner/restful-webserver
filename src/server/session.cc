@@ -158,7 +158,7 @@ void session::handle_read(const boost::system::error_code &error, size_t bytes_t
                 << "Received " << request.method << " " << request.path << " from [unknown IP]";
         }
         // Find the appropriate handler for the request path
-        std::shared_ptr<HttpResponse> response_ptr = nullptr;
+        std::unique_ptr<HttpResponse> response_ptr = nullptr;
         std::optional<std::string> best_prefix = {};  // empty option
 
         for (auto &[prefix, _] : routes_) {
@@ -188,7 +188,7 @@ void session::handle_read(const boost::system::error_code &error, size_t bytes_t
             res.body = "404 Not Found";
             res.headers["Content-Type"] = "text/plain";
             res.headers["Content-Length"] = std::to_string(res.body.size());
-            response_ptr = std::make_shared<HttpResponse>(res);
+            response_ptr = std::make_unique<HttpResponse>(res);
         }
 
         // Check if the connection should be closed

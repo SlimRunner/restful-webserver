@@ -17,7 +17,7 @@ TEST(EchoHandlerTest, HandleGetRequestEchoesRequest) {
     req.headers = {{"Host", "localhost"}, {"Accept", "*/*"}};
     req.body = "test body";
 
-    std::shared_ptr<HttpResponse> resp = eHandler.handle_request(req);
+    std::unique_ptr<HttpResponse> resp = eHandler.handle_request(req);
 
     EXPECT_EQ(resp->status, StatusCode::OK);
 
@@ -51,7 +51,7 @@ TEST(EchoHandlerTest, RejectsNonGet) {
 
     for (const auto &method : foo) {
         req.method = method;
-        std::shared_ptr<HttpResponse> resp = eHandler.handle_request(req);
+        std::unique_ptr<HttpResponse> resp = eHandler.handle_request(req);
 
         EXPECT_EQ(resp->status, StatusCode::BAD_REQUEST);
         EXPECT_EQ(resp->body, "");

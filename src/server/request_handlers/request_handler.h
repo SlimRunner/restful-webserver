@@ -41,7 +41,7 @@ class RequestHandler {
     virtual ~RequestHandler() = default;
 
     // Handle a request and generate a response
-    virtual std::shared_ptr<HttpResponse> handle_request(const HttpRequest& request) = 0;
+    virtual std::unique_ptr<HttpResponse> handle_request(const HttpRequest& request) = 0;
 };
 
 // Overload the stream insertion operator for StatusCode

@@ -39,19 +39,19 @@ StaticFileHandler::StaticFileHandler(const std::string &path_prefix,
 Handles an HTTP GET request by serving a file from disk.
 Returns 400 for non-GET methods, 403 for unsafe paths, and 404 if the file is missing.
 */
-std::shared_ptr<HttpResponse> StaticFileHandler::handle_request(const HttpRequest &request) {
-    auto response = std::make_shared<HttpResponse>();
+std::unique_ptr<HttpResponse> StaticFileHandler::handle_request(const HttpRequest &request) {
+    HttpResponse response = {};
 
     // Check if the request method is GET
     if (request.method != "GET") {
         BOOST_LOG_TRIVIAL(warning)
             << "StaticFileHandler rejected non-GET request: " << request.method;
         // Return 400 Bad Request for non-GET methods
-        response->status = StatusCode::BAD_REQUEST;
-        response->body = "";
-        response->headers["Content-Type"] = "text/plain";
-        response->headers["Content-Length"] = "0";
-        return response;
+        response.status = StatusCode::BAD_REQUEST;
+        response.body = "";
+        response.headers["Content-Type"] = "text/plain";
+        response.headers["Content-Length"] = "0";
+        return std::make_unique<HttpResponse>(response);
     }
 
     // Get the file path relative to the base directory
@@ -72,11 +72,11 @@ std::shared_ptr<HttpResponse> StaticFileHandler::handle_request(const HttpReques
     if (!is_path_safe(file_path)) {
         BOOST_LOG_TRIVIAL(warning)
             << "Security warning: Attempted path traversal attack: " << file_path;
-        response->status = StatusCode::FORBIDDEN;
-        response->body = "403 Forbidden";
-        response->headers["Content-Type"] = "text/plain";
-        response->headers["Content-Length"] = std::to_string(response->body.size());
-        return response;
+        response.status = StatusCode::FORBIDDEN;
+        response.body = "403 Forbidden";
+        response.headers["Content-Type"] = "text/plain";
+        response.headers["Content-Length"] = std::to_string(response.body.size());
+        return std::make_unique<HttpResponse>(response);
     }
 
     BOOST_LOG_TRIVIAL(debug) << "StaticFileHandler handling GET request for path: " << file_path;
@@ -85,11 +85,11 @@ std::shared_ptr<HttpResponse> StaticFileHandler::handle_request(const HttpReques
     if (!std::filesystem::exists(file_path)) {
         BOOST_LOG_TRIVIAL(warning) << "Requested file not found: " << file_path;
 
-        response->status = StatusCode::NOT_FOUND;
-        response->body = "404 Not Found";
-        response->headers["Content-Type"] = "text/plain";
-        response->headers["Content-Length"] = std::to_string(response->body.size());
-        return response;
+        response.status = StatusCode::NOT_FOUND;
+        response.body = "404 Not Found";
+        response.headers["Content-Type"] = "text/plain";
+        response.headers["Content-Length"] = std::to_string(response.body.size());
+        return std::make_unique<HttpResponse>(response);
     }
 
     // Get file size for logging
@@ -101,10 +101,10 @@ std::shared_ptr<HttpResponse> StaticFileHandler::handle_request(const HttpReques
     std::string file_content = read_file(file_path, success);
 
     if (success) {
-        response->status = StatusCode::OK;
-        response->body = file_content;
-        response->headers["Content-Type"] = get_mime_type(file_path);
-        response->headers["Content-Length"] = std::to_string(file_content.size());
+        response.status = StatusCode::OK;
+        response.body = file_content;
+        response.headers["Content-Type"] = get_mime_type(file_path);
+        response.headers["Content-Length"] = std::to_string(file_content.size());
 
         // For zip files, add Content-Disposition header to help with downloads
         std::string mime_type = get_mime_type(file_path);
@@ -113,19 +113,19 @@ std::shared_ptr<HttpResponse> StaticFileHandler::handle_request(const HttpReques
             size_t last_slash = file_path.find_last_of("/");
             std::string filename =
                 (last_slash != std::string::npos) ? file_path.substr(last_slash + 1) : file_path;
-            response->headers["Content-Disposition"] = "attachment; filename=\"" + filename + "\"";
+            response.headers["Content-Disposition"] = "attachment; filename=\"" + filename + "\"";
 
             // Add cache control headers to prevent caching issues
-            response->headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
-            response->headers["Pragma"] = "no-cache";
-            response->headers["Expires"] = "0";
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+            response.headers["Pragma"] = "no-cache";
+            response.headers["Expires"] = "0";
         } else if (mime_type == "application/zip") {
             // Extract filename from the path
             size_t last_slash = file_path.find_last_of('/');
             std::string filename =
                 (last_slash != std::string::npos) ? file_path.substr(last_slash + 1) : file_path;
 
-            response->headers["Content-Disposition"] = "attachment; filename=\"" + filename + "\"";
+            response.headers["Content-Disposition"] = "attachment; filename=\"" + filename + "\"";
         }
 
         BOOST_LOG_TRIVIAL(info) << "Served file: " << file_path << " (" << file_content.size()
@@ -133,13 +133,13 @@ std::shared_ptr<HttpResponse> StaticFileHandler::handle_request(const HttpReques
                                 << " as " << get_mime_type(file_path);
     } else {
         BOOST_LOG_TRIVIAL(error) << "Failed to read file: " << file_path;
-        response->status = StatusCode::NOT_FOUND;
-        response->body = "404 Not Found";
-        response->headers["Content-Type"] = "text/plain";
-        response->headers["Content-Length"] = std::to_string(response->body.size());
+        response.status = StatusCode::NOT_FOUND;
+        response.body = "404 Not Found";
+        response.headers["Content-Type"] = "text/plain";
+        response.headers["Content-Length"] = std::to_string(response.body.size());
     }
 
-    return response;
+    return std::make_unique<HttpResponse>(response);
 }
 
 /*

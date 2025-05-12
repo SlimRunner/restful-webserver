@@ -7,7 +7,7 @@ class EchoHandler : public RequestHandler {
    public:
     EchoHandler(const std::string& path_prefix, const std::map<std::string, std::string>& args);
 
-    std::shared_ptr<HttpResponse> handle_request(const HttpRequest& request) override;
+    std::unique_ptr<HttpResponse> handle_request(const HttpRequest& request) override;
 
    private:
     std::string path_prefix_;
