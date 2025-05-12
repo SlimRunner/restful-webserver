@@ -8,19 +8,28 @@
 
 #include "request_handler.h"
 
-/*
-This defines the signature of a factory function:
-Given a config path and arguments, return a RequestHandler
-*/
+struct RoutingPayload {
+    std::string handler;
+    std::map<std::string, std::string> arguments;
+};
+
+/// @brief handler factory signature
 using RequestHandlerFactory = std::function<std::shared_ptr<RequestHandler>(
     const std::string& path_prefix, const std::map<std::string, std::string>& args)>;
 
-/*
-This means only one registry in the program
-Allows handlers to register their factory functions by name
-Allows the server to look up the handlers for use later
-*/
-class HandlerRegistry {
+/// @brief resource map to retrieve factories
+using RoutingMap = std::map<std::string, RoutingPayload>;
+
+/// @brief Used to manage singleton dependency injection
+class IHandlerRegistry {
+   public:
+    virtual ~IHandlerRegistry() = default;
+    virtual void register_handler(const std::string& name, RequestHandlerFactory factory) = 0;
+    virtual RequestHandlerFactory get_factory(const std::string& name) const = 0;
+};
+
+/// @brief Singleton registry to manage handler factories by name
+class HandlerRegistry : public IHandlerRegistry {
    public:
     // Access the single shared instance of the registry
     static HandlerRegistry& instance() {
@@ -29,20 +38,23 @@ class HandlerRegistry {
     }
 
     // Register a handler class with its factory function
-    void register_handler(const std::string& name, RequestHandlerFactory factory) {
-        factories_[name] = factory;
-    }
+    void register_handler(const std::string& name, RequestHandlerFactory factory) override;
 
     // Retrieve a factory by name
-    RequestHandlerFactory get_factory(const std::string& name) const {
-        auto it = factories_.find(name);
-        if (it != factories_.end()) {
-            return it->second;
-        }
-        return nullptr;
-    }
+    RequestHandlerFactory get_factory(const std::string& name) const override;
 
    private:
+    // the block below sets up this class as a proper singleton.
+
+    // constructor must be private
+    HandlerRegistry() = default;
+    // disable copy semantics
+    HandlerRegistry(const HandlerRegistry&) = delete;
+    HandlerRegistry& operator=(const HandlerRegistry&) = delete;
+    // disable move semantics
+    HandlerRegistry(HandlerRegistry&&) = delete;
+    HandlerRegistry& operator=(HandlerRegistry&&) = delete;
+
     std::map<std::string, RequestHandlerFactory> factories_;
 };
 

@@ -7,7 +7,8 @@
 
 class MockSession : public session {
    public:
-    MockSession(boost::asio::io_service& io_service) : session(io_service), start_called_(false) {}
+    MockSession(boost::asio::io_service& io_service)
+        : session(io_service, {}, &HandlerRegistry::instance()), start_called_(false) {}
 
     void start() override {
         start_called_ = true;

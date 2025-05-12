@@ -3,19 +3,21 @@
 #include <boost/bind/bind.hpp>
 #include <boost/log/trivial.hpp>
 #include <iostream>
+#include <optional>
 #include <sstream>
 #include <string>
 using namespace boost::placeholders;
+
+static bool isPrefixMatch(const std::string &, const std::string &);
 
 /*
 Constructs a new session.
 - io_service: Boost I/O context for asynchronous operations.
 - handlers: list of request handlers used to process incoming requests.
 */
-session::session(boost::asio::io_service &io_service,
-                 std::vector<std::shared_ptr<RequestHandler>> handlers)
+session::session(boost::asio::io_service &io_service, RoutingMap routes, IHandlerRegistry *registry)
     // adding already_deleted_ member to constructor
-    : socket_(io_service), handlers_(handlers), already_deleted_(false) {}
+    : socket_(io_service), routes_(routes), registry_{registry}, already_deleted_(false) {}
 
 // Returns a reference to the TCP socket associated with this session.
 tcp::socket &session::socket() {
@@ -156,38 +158,37 @@ void session::handle_read(const boost::system::error_code &error, size_t bytes_t
                 << "Received " << request.method << " " << request.path << " from [unknown IP]";
         }
         // Find the appropriate handler for the request path
-        bool handled = false;
-        HttpResponse response;
+        std::shared_ptr<HttpResponse> response_ptr = nullptr;
+        std::optional<std::string> best_prefix = {};  // empty option
 
-        std::shared_ptr<RequestHandler> best_handler = nullptr;
-        size_t longest_match_len = 0;
-
-        for (auto &handler : handlers_) {
-            if (handler->can_handle(request.path)) {
-                const std::string &prefix = handler->get_prefix();  // You might need to expose this
-                if (prefix.length() > longest_match_len) {
-                    best_handler = handler;
-                    longest_match_len = prefix.length();
-                }
+        for (auto &[prefix, _] : routes_) {
+            BOOST_LOG_TRIVIAL(debug) << "try " << prefix << " prefix";
+            if (isPrefixMatch(prefix, request.path) &&
+                (!best_prefix || prefix.size() > best_prefix->size())) {
+                best_prefix.emplace(prefix);
             }
         }
 
-        if (best_handler) {
-            BOOST_LOG_TRIVIAL(debug) << "Handler matched for path: " << request.path
-                                     << " using handler type: " << typeid(*best_handler).name();
-            response = *best_handler->handle_request(request);
-            handled = true;
-        }
+        if (best_prefix) {
+            BOOST_LOG_TRIVIAL(debug) << "best prefix found " << *best_prefix;
+            const auto &registry = *registry_;
+            const auto payload = routes_.at(*best_prefix);
+            const auto factory = registry.get_factory(payload.handler);
+            const auto &handler = factory(*best_prefix, payload.arguments);
 
-        // If no handler was found, return a 404 Not Found response
-        if (!handled) {
+            BOOST_LOG_TRIVIAL(debug) << "Handler matched for path: " << request.path
+                                     << " using handler type: " << payload.handler;
+            response_ptr = handler->handle_request(request);
+        } else {
+            HttpResponse res;
             BOOST_LOG_TRIVIAL(warning)
                 << "No handler for path: " << request.path << ". Sending 404.";
 
-            response.status = StatusCode::NOT_FOUND;
-            response.body = "404 Not Found";
-            response.headers["Content-Type"] = "text/plain";
-            response.headers["Content-Length"] = std::to_string(response.body.size());
+            res.status = StatusCode::NOT_FOUND;
+            res.body = "404 Not Found";
+            res.headers["Content-Type"] = "text/plain";
+            res.headers["Content-Length"] = std::to_string(res.body.size());
+            response_ptr = std::make_shared<HttpResponse>(res);
         }
 
         // Check if the connection should be closed
@@ -195,15 +196,15 @@ void session::handle_read(const boost::system::error_code &error, size_t bytes_t
                                  request.headers["Connection"] == "close");
 
         if (close_connection) {
-            response.headers["Connection"] = "close";
+            response_ptr->headers["Connection"] = "close";
         } else {
-            response.headers["Connection"] = "keep-alive";
+            response_ptr->headers["Connection"] = "keep-alive";
         }
 
         // Convert response to string and store it in the member variable
-        current_response_ = response.ToString();
+        current_response_ = response_ptr->ToString();
         BOOST_LOG_TRIVIAL(debug) << "Sent response for " << request.path
-                                 << " with status: " << response.status;
+                                 << " with status: " << response_ptr->status;
         boost::asio::async_write(socket_, boost::asio::buffer(current_response_),
                                  boost::bind(&session::handle_write, this, _1));
 
@@ -239,4 +240,15 @@ void session::handle_write(const boost::system::error_code &error) {
         boost::asio::buffer(data_, max_length),
         boost::bind(&session::handle_read, this, boost::asio::placeholders::error,
                     boost::asio::placeholders::bytes_transferred));
+}
+
+static bool isPrefixMatch(const std::string &handler_prefix, const std::string &request_path) {
+    // match if entire path is '/'
+    if (handler_prefix == "/") return true;
+    if (request_path.size() < handler_prefix.size()) return false;
+    if (request_path.compare(0, handler_prefix.size(), handler_prefix) != 0) return false;
+
+    // if they don't match path is longer so it should have a trailing '/'
+    return handler_prefix.size() == request_path.size() ||
+           request_path[handler_prefix.size()] == '/';
 }

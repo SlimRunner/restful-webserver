@@ -1,7 +1,12 @@
 #include "session.h"
 
+#include "echo_handler.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "static_file_handler.h"
+
+extern volatile int force_link_echo_handler;
+extern volatile int force_link_static_handler;
 
 // Made a testableSession class to test the private stuff in session class
 class TestableSession : public session {
@@ -18,7 +23,9 @@ class TestableSession : public session {
     using session::already_deleted_;
     using session::current_response_;
     using session::data_;
+    using session::registry_;
     using session::request_buffer_;
+    using session::routes_;
 };
 
 struct session_deleter {
@@ -34,40 +41,84 @@ struct session_deleter {
 
 class MockHandler : public RequestHandler {
    public:
-    MOCK_METHOD(std::shared_ptr<HttpResponse>, handle_request, (const HttpRequest &), (override));
-    MOCK_METHOD(bool, can_handle, (const std::string &), (const, override));
-    MOCK_METHOD(std::string, get_prefix, (), (const, override));
+    std::string path_prefix_;
+    MockHandler(const std::string &path_prefix, const std::map<std::string, std::string> &_)
+        : path_prefix_{path_prefix} {}
+
+    std::shared_ptr<HttpResponse> handle_request(const HttpRequest &request) override {
+        HttpResponse res;
+        res.status = StatusCode::OK;  // Set status to 200 OK
+        res.body = path_prefix_;      // Keep path prefix for verification
+        res.headers["Content-Type"] = "text/plain";
+        res.headers["Content-Length"] = std::to_string(res.body.size());
+        return std::make_shared<HttpResponse>(res);
+    }
+};
+
+class MockRegistry : public IHandlerRegistry {
+   public:
+    MOCK_METHOD(void, register_handler, (const std::string &name, RequestHandlerFactory factory),
+                (override));
+    MOCK_METHOD(RequestHandlerFactory, get_factory, (const std::string &name), (const override));
+
+    MockRegistry() {
+        // Default behavior: return MockHandler
+        ON_CALL(*this, get_factory).WillByDefault([this](const std::string &name) {
+            return [name](const std::string &path_prefix,
+                          const std::map<std::string, std::string> &args) {
+                return std::make_shared<MockHandler>(path_prefix, args);
+            };
+        });
+    }
 };
 
 class SessionTest : public ::testing::Test {
    protected:
     boost::asio::io_service io_service_;
-    std::shared_ptr<MockHandler> mock_handler_;
-    std::vector<std::shared_ptr<RequestHandler>> handlers_;
+
+    MockRegistry mock_registry;
 
     std::unique_ptr<TestableSession, session_deleter> session_;
 
     void SetUp() override {
-        mock_handler_ = std::make_shared<MockHandler>();
-        handlers_.push_back(mock_handler_);
+        (void)force_link_echo_handler;
+        (void)force_link_static_handler;
+
+        RoutingMap routes_;
+
         session_ = std::unique_ptr<TestableSession, session_deleter>(
-            new TestableSession(io_service_, handlers_), session_deleter());
+            new TestableSession(io_service_, routes_, &mock_registry), session_deleter());
+    }
 
-        ON_CALL(*mock_handler_, get_prefix()).WillByDefault(testing::Return("/echo"));
+    void injectData(const std::string &req) {
+        session_->request_buffer_ = req;
+    }
 
-        ON_CALL(*mock_handler_, handle_request(testing::_))
-            .WillByDefault(testing::Invoke([](const HttpRequest &req) {
-                auto res = std::make_shared<HttpResponse>();
-                res->body = "mock";
-                if (req.method == "GET") {
-                    res->status = StatusCode::OK;
-                } else {
-                    res->status = StatusCode::BAD_REQUEST;
-                }
-                res->headers["Content-Type"] = "text/plain";
-                res->headers["Content-Length"] = std::to_string(res->body.size());
-                return res;
-            }));
+    void runIO() {
+        // Useful if you're testing async behavior
+        io_service_.run();
+    }
+};
+
+class SessionTestReal : public ::testing::Test {
+   protected:
+    boost::asio::io_service io_service_;
+
+    std::unique_ptr<TestableSession, session_deleter> session_;
+
+    void SetUp() override {
+        (void)force_link_echo_handler;
+        (void)force_link_static_handler;
+
+        IHandlerRegistry *registry = &HandlerRegistry::instance();
+        RoutingMap routes_;
+
+        // no need to use other handlers because they are tested in a
+        // different unit
+        routes_.insert({"/echo", {{"EchoHandler"}, {}}});
+
+        session_ = std::unique_ptr<TestableSession, session_deleter>(
+            new TestableSession(io_service_, routes_, registry), session_deleter());
     }
 
     void injectData(const std::string &req) {
@@ -122,6 +173,8 @@ TEST_F(SessionTest, SafeSessionDeletion) {
     // --
     session_->safe_delete();
     EXPECT_TRUE(session_->already_deleted_);
+    // make sure we do not get a seg fault
+    session_->safe_delete();
 }
 
 // tests that port can be opened and closed correctly
@@ -152,7 +205,6 @@ TEST_F(SessionTest, SessionDirectSetRequest) {
 }
 
 // tests for handle_write behavior
-
 TEST_F(SessionTest, HandleWriteWithError) {
     // Simulate a write error; should trigger safe_delete()
     boost::system::error_code errCode(1, boost::system::system_category());
@@ -201,33 +253,23 @@ TEST_F(SessionTest, HandleReadWithOversize) {
 }
 
 // uses a mock response to test a correct handle read
-TEST_F(SessionTest, HandleReadCompleteRequest) {
+TEST_F(SessionTestReal, HandleReadCompleteRequest) {
     std::string fullReq =
         "GET /echo HTTP/1.1\r\n"
         "Host: localhost\r\n"
         "Connection: close\r\n\r\n";
     boost::system::error_code successCode{};
-    const std::string mockRes =
-        "HTTP/1.1 200 OK\r\n"
-        "Connection: close\r\n"
-        "Content-Length: 4\r\n"
-        "Content-Type: text/plain\r\n"
-        "\r\n"
-        "mock";
-
-    // Tell the mock to claim this path
-    EXPECT_CALL(*mock_handler_, can_handle("/echo")).WillOnce(testing::Return(true));
-    EXPECT_CALL(*mock_handler_, handle_request(testing::_)).Times(1);
 
     session_->set_request(fullReq);
     session_->handle_read(successCode, fullReq.size());
 
     EXPECT_FALSE(session_->already_deleted_);
-    EXPECT_EQ(session_->current_response_, mockRes);
+    EXPECT_NE(session_->current_response_.find("200 OK"), std::string::npos);
+    EXPECT_NE(session_->current_response_.find("Connection: close"), std::string::npos);
 }
 
 // uses a mock response to test not handled (404)
-TEST_F(SessionTest, HandleReadUnhandledRequest) {
+TEST_F(SessionTestReal, HandleReadUnhandledRequest) {
     std::string fullReq =
         "GET /mockfails HTTP/1.1\r\n"
         "Host: localhost\r\n\r\n";
@@ -240,27 +282,19 @@ TEST_F(SessionTest, HandleReadUnhandledRequest) {
 }
 
 // uses a mock response to test multiple requests
-TEST_F(SessionTest, HandleMultipleRequests) {
+TEST_F(SessionTestReal, HandleMultipleRequests) {
     std::string fullReq =
         "GET /echo HTTP/1.1\r\n"
         "Host: localhost\r\n\r\n"
         "GET /echo HTTP/1.1\r\n"
         "Host: localhost\r\n\r\n";
     boost::system::error_code successCode{};
-    const std::string mockRes =
-        "HTTP/1.1 200 OK\r\n"
-        "Connection: keep-alive\r\n"
-        "Content-Length: 4\r\n"
-        "Content-Type: text/plain\r\n"
-        "\r\n"
-        "mock";
 
-    EXPECT_CALL(*mock_handler_, can_handle("/echo")).Times(2).WillRepeatedly(testing::Return(true));
-    EXPECT_CALL(*mock_handler_, handle_request(testing::_)).Times(2);  // Two requests
     session_->set_request(fullReq);
     session_->handle_read(successCode, fullReq.size());
     EXPECT_FALSE(session_->already_deleted_);
-    EXPECT_EQ(session_->current_response_, mockRes);
+    EXPECT_NE(session_->current_response_.find("200 OK"), std::string::npos);
+    EXPECT_NE(session_->current_response_.find("Connection: keep-alive"), std::string::npos);
 }
 
 // tests that it fails when not HTTP1.1
@@ -285,128 +319,87 @@ TEST_F(SessionTest, HandleBadVersionRequest) {
 // This tests the longest matching prefix
 // Using a mockhandler to achieve this by maching a handler take the paths
 TEST_F(SessionTest, PicksLongestMatchingPrefix) {
-    auto mock_handler_long = std::make_shared<MockHandler>();
-    handlers_.push_back(mock_handler_long);
+    session_->routes_.insert({"/", {{"/"}, {}}});
+    session_->routes_.insert({"/A", {{"/A"}, {}}});
+    session_->routes_.insert({"/A/D/C", {{"/A/D/C"}, {}}});
+    session_->routes_.insert({"/A/B/C", {{"/A/B/C"}, {}}});
+    session_->routes_.insert({"/A/B/C/D/E/F/G", {{"/A/B/C/D/E/F/G"}, {}}});
 
-    // Recreate session to use updated handlers
-    session_ = std::unique_ptr<TestableSession, session_deleter>(
-        new TestableSession(io_service_, handlers_), session_deleter());
+    std::string fullReq =
+        "GET /A/B/C/D/file.txt HTTP/1.1\r\n"
+        "Host: localhost\r\n"
+        "\r\n";
+    boost::system::error_code successCode{};
 
-    // Short prefix handler
-    EXPECT_CALL(*mock_handler_, can_handle("/echo/long/path")).WillOnce(testing::Return(true));
-    EXPECT_CALL(*mock_handler_, get_prefix()).WillOnce(testing::Return("/echo"));
-
-    // Longer prefix handler
-    EXPECT_CALL(*mock_handler_long, can_handle("/echo/long/path")).WillOnce(testing::Return(true));
-    EXPECT_CALL(*mock_handler_long, get_prefix()).WillOnce(testing::Return("/echo/long"));
-    EXPECT_CALL(*mock_handler_long, handle_request(testing::_))
-        .Times(1)
-        .WillOnce(testing::Invoke([](const HttpRequest &req) {
-            auto res = std::make_shared<HttpResponse>();
-            res->status = StatusCode::OK;
-            res->body = "matched long";
-            res->headers["Content-Type"] = "text/plain";
-            res->headers["Content-Length"] = "12";
-            return res;
-        }));
-
-    std::string request_str =
-        "GET /echo/long/path HTTP/1.1\r\n"
-        "Host: localhost\r\n\r\n";
-
-    session_->set_request(request_str);
-    boost::system::error_code success{};
-    session_->handle_read(success, request_str.size());
-
+    session_->set_request(fullReq);
+    session_->handle_read(successCode, fullReq.size());
     EXPECT_FALSE(session_->already_deleted_);
-    EXPECT_NE(session_->current_response_.find("matched long"), std::string::npos);
+    std::string expected = "/A/B/C";
+    std::string response = session_->current_response_;
+    EXPECT_GE(response.size(), expected.size());
+    EXPECT_EQ(response.substr(response.size() - expected.size()), expected);
+
+    fullReq =
+        "GET /A/B/C/D/E/F/G/more/paths/file.html HTTP/1.1\r\n"
+        "Host: localhost\r\n"
+        "\r\n";
+
+    session_->set_request(fullReq);
+    session_->handle_read(successCode, fullReq.size());
+    EXPECT_FALSE(session_->already_deleted_);
+    expected = "/A/B/C/D/E/F/G";
+    response = session_->current_response_;
+    EXPECT_GE(response.size(), expected.size());
+    EXPECT_EQ(response.substr(response.size() - expected.size()), expected);
+
+    fullReq =
+        "GET / HTTP/1.1\r\n"
+        "Host: localhost\r\n"
+        "\r\n";
+
+    session_->set_request(fullReq);
+    session_->handle_read(successCode, fullReq.size());
+    EXPECT_FALSE(session_->already_deleted_);
+    expected = "/";
+    response = session_->current_response_;
+    EXPECT_GE(response.size(), expected.size());
+    EXPECT_EQ(response.substr(response.size() - expected.size()), expected);
 }
 
 // Ensure /echoes does not match /echo.
 TEST_F(SessionTest, PrefixShadowing_EchoDoesNotMatchEchoes) {
-    auto shadowed_handler = std::make_shared<MockHandler>();
-    handlers_.push_back(shadowed_handler);
+    session_->routes_.insert({"/echo", {{"/echo"}, {}}});
+    session_->routes_.insert({"/echoes", {{"/echoes"}, {}}});
 
-    // Recreate session with both handlers
-    session_ = std::unique_ptr<TestableSession, session_deleter>(
-        new TestableSession(io_service_, handlers_), session_deleter());
-
-    // Only the shadowed handler claims `/echoes`, but not `/echo`
-    EXPECT_CALL(*mock_handler_, can_handle("/echoes")).WillOnce(testing::Return(false));
-    EXPECT_CALL(*shadowed_handler, can_handle("/echoes")).WillOnce(testing::Return(true));
-    EXPECT_CALL(*shadowed_handler, get_prefix()).WillOnce(testing::Return("/echoes"));
-    EXPECT_CALL(*shadowed_handler, handle_request(testing::_))
-        .WillOnce(testing::Invoke([](const HttpRequest &req) {
-            auto res = std::make_shared<HttpResponse>();
-            res->status = StatusCode::OK;
-            res->body = "shadowed";
-            res->headers["Content-Type"] = "text/plain";
-            res->headers["Content-Length"] = "9";
-            return res;
-        }));
-
-    std::string request =
+    std::string fullReq =
         "GET /echoes HTTP/1.1\r\n"
-        "Host: localhost\r\n\r\n";
+        "Host: localhost\r\n"
+        "\r\n";
+    boost::system::error_code successCode{};
 
-    session_->set_request(request);
-    boost::system::error_code success{};
-    session_->handle_read(success, request.size());
-
+    session_->set_request(fullReq);
+    session_->handle_read(successCode, fullReq.size());
     EXPECT_FALSE(session_->already_deleted_);
-    EXPECT_NE(session_->current_response_.find("shadowed"), std::string::npos);
+    std::string expected = "/echoes";
+    std::string response = session_->current_response_;
+    EXPECT_GE(response.size(), expected.size());
+    EXPECT_EQ(response.substr(response.size() - expected.size()), expected);
 }
 
 // No Match at All -> Should return 404
 TEST_F(SessionTest, NoMatchingPrefixReturns404) {
-    EXPECT_CALL(*mock_handler_, can_handle("/random"))
-        .WillOnce(testing::Return(false));  // No match
+    session_->routes_.insert({"/A/D/C", {{"/A/D/C"}, {}}});
+    session_->routes_.insert({"/A/B/C", {{"/A/B/C"}, {}}});
+    session_->routes_.insert({"/A/B/C/D/E/F/G", {{"/A/B/C/D/E/F/G"}, {}}});
 
-    std::string request =
-        "GET /random HTTP/1.1\r\n"
-        "Host: localhost\r\n\r\n";
+    std::string fullReq =
+        "GET /A/D/B/E/file.txt HTTP/1.1\r\n"
+        "Host: localhost\r\n"
+        "\r\n";
+    boost::system::error_code successCode{};
 
-    session_->set_request(request);
-    boost::system::error_code success{};
-    session_->handle_read(success, request.size());
-
+    session_->set_request(fullReq);
+    session_->handle_read(successCode, fullReq.size());
     EXPECT_FALSE(session_->already_deleted_);
     EXPECT_NE(session_->current_response_.find("404 Not Found"), std::string::npos);
-}
-
-// Tie on Prefix Length choosing the first one wins (or deterministic winner)
-TEST_F(SessionTest, SameLengthPrefixPicksFirstRegistered) {
-    auto second_handler = std::make_shared<MockHandler>();
-    handlers_.push_back(second_handler);
-
-    session_ = std::unique_ptr<TestableSession, session_deleter>(
-        new TestableSession(io_service_, handlers_), session_deleter());
-
-    // Both claim same-length prefix
-    EXPECT_CALL(*mock_handler_, can_handle("/tie")).WillOnce(testing::Return(true));
-    EXPECT_CALL(*mock_handler_, get_prefix()).WillOnce(testing::Return("/tie"));
-
-    EXPECT_CALL(*second_handler, can_handle("/tie")).WillOnce(testing::Return(true));
-    EXPECT_CALL(*second_handler, get_prefix()).WillOnce(testing::Return("/tie"));
-
-    EXPECT_CALL(*mock_handler_, handle_request(testing::_))
-        .WillOnce(testing::Invoke([](const HttpRequest &req) {
-            auto res = std::make_shared<HttpResponse>();
-            res->status = StatusCode::OK;
-            res->body = "first wins";
-            res->headers["Content-Type"] = "text/plain";
-            res->headers["Content-Length"] = "10";
-            return res;
-        }));
-
-    std::string request =
-        "GET /tie HTTP/1.1\r\n"
-        "Host: localhost\r\n\r\n";
-
-    session_->set_request(request);
-    boost::system::error_code success{};
-    session_->handle_read(success, request.size());
-
-    EXPECT_FALSE(session_->already_deleted_);
-    EXPECT_NE(session_->current_response_.find("first wins"), std::string::npos);
 }

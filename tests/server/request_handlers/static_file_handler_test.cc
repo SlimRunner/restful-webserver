@@ -101,30 +101,6 @@ class StaticFileHandlerText : public ::testing::Test {
     }
 };
 
-// // test that CanHandle successfully accepts correct paths
-// TEST(StaticFileHandlerTest, CanHandleValidPaths) {
-//     StaticFileHandler handler("/static", "./base/dir");
-//     EXPECT_TRUE(handler.CanHandle("/static/a/b/c"));
-//     EXPECT_TRUE(handler.CanHandle("/static/x/y"));
-//     EXPECT_TRUE(handler.CanHandle("/static/x/c"));
-//     EXPECT_TRUE(handler.CanHandle("/static"));
-//     EXPECT_TRUE(handler.CanHandle("/static/base/dir"));
-
-//     // this assertion is assumed in later tests because the
-//     // Content-Disposition code assumes this is possible
-//     handler = StaticFileHandler("", "./base/dir");
-//     EXPECT_TRUE(handler.CanHandle("somefile.txt"));
-// }
-
-// // test that CanHandle successfully rejects incorrect paths
-// TEST(StaticFileHandlerTest, CanHandleInvalidPaths) {
-//     StaticFileHandler handler("/static", "./base/dir");
-//     EXPECT_FALSE(handler.CanHandle("/foobar/a/b/c"));
-//     EXPECT_FALSE(handler.CanHandle("static/a/b/c"));
-//     EXPECT_FALSE(handler.CanHandle("~/static/a/b/c"));
-//     EXPECT_FALSE(handler.CanHandle("./base/dir/static/a/b/c"));
-// }
-
 // test files that use all of the MimeTypes and verify that it can read
 // them
 TEST_F(StaticFileHandlerText, HandleRequestWithAllFiles) {

@@ -17,6 +17,7 @@ function run_integration_only() {
   mkdir -p build
   cd build
   cmake ..
+  make
   ctest -R integration_test
   cd ..
 }

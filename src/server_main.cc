@@ -19,9 +19,9 @@
 #include <vector>
 
 #include "logger.h"
-#include "server/server.h"
-#include "server/startup_utils.h"
-#include "server/tagged_exceptions.h"
+#include "server.h"
+#include "startup_utils.h"
+#include "tagged_exceptions.h"
 
 using namespace boost::placeholders;
 extern volatile int force_link_echo_handler;
@@ -30,8 +30,13 @@ extern volatile int force_link_static_handler;
 int main(int argc, char *argv[]) {
     (void)force_link_echo_handler;
     (void)force_link_static_handler;
+
     try {
         init_logging();
+        IHandlerRegistry *registry = &HandlerRegistry::instance();
+        if (registry == nullptr) {
+            throw expt::registry_exception("The registry singleton failed to load");
+        }
 
         BOOST_LOG_TRIVIAL(info) << "Server starting...";
         auto arguments = parse_arguments(argc, argv);
@@ -59,10 +64,16 @@ int main(int argc, char *argv[]) {
         boost::asio::io_service io_service;
 
         // Create the server with the configured handlers
-        server s(io_service, config.port_number, config.handlers,
-                 [](auto &io, auto handlers) { return new session(io, handlers); });
+        server s(io_service, config.port_number, config.route_map, [&](auto &io, auto routes) {
+            return new session(io, std::move(routes), registry);
+        });
         BOOST_LOG_TRIVIAL(info) << "Server started successfully on port " << config.port_number;
         io_service.run();
+
+    } catch (expt::registry_exception &e) {
+        BOOST_LOG_TRIVIAL(error) << "Registry failure: " << e.what();
+        BOOST_LOG_TRIVIAL(error) << "Server failed to start.";
+        return 1;
 
     } catch (std::invalid_argument &e) {
         BOOST_LOG_TRIVIAL(error) << "Invalid argument: " << e.what();

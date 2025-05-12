@@ -11,13 +11,13 @@ Constructs the server, binds to the given port, and starts accepting connections
 - handlers: List of request handlers.
 - factory: Function used to create session objects (can be mocked for testing).
 */
-server::server(boost::asio::io_service &io_service, short port,
-               std::vector<std::shared_ptr<RequestHandler>> handlers, SessionFactory factory)
+server::server(boost::asio::io_service &io_service, short port, RoutingMap routes,
+               SessionFactory factory)
     : io_service_(io_service),
       acceptor_(io_service, tcp::endpoint(tcp::v4(), port)),
       // Save the provided factory function so it can be used later in start_accept()
       session_factory_(factory),
-      handlers_(handlers) {
+      routes_(routes) {
     BOOST_LOG_TRIVIAL(info) << "Server constructor: Listening on port " << port;
 
     // Start accepting incoming client connections
@@ -32,7 +32,7 @@ void server::start_accept() {
     BOOST_LOG_TRIVIAL(debug) << "Waiting for new client connection...";
 
     // Create a new session using the injected factory (allows unit test injection of mocks)
-    session *new_session = session_factory_(io_service_, handlers_);
+    session *new_session = session_factory_(io_service_, routes_);
 
     // Initiate asynchronous accept operation; when a client connects, handle_accept will be called
     acceptor_.async_accept(

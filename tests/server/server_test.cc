@@ -21,7 +21,7 @@ TEST_F(ServerTest, UsesInjectedSessionFactory) {
     // Create a factory that tracks how many times it's called
     SessionFactory test_factory = [&](auto &io_ref, auto handlers) {
         ++factory_call_count;
-        return new session(io_ref);
+        return new session(io_ref, {}, &HandlerRegistry::instance());
     };
 
     // Create server using custom factory
@@ -39,12 +39,15 @@ TEST_F(ServerTest, UsesInjectedSessionFactory) {
 TEST_F(ServerTest, HandleAcceptCallsStart) {
     boost::asio::io_service io;
 
+    SessionFactory test_factory = [&](auto &io_ref, auto handlers) {
+        return new session(io_ref, {}, &HandlerRegistry::instance());
+    };
+
     // Make the mock directly, don't rely on factory assignment
     MockSession *mock_ptr = new MockSession(io);
 
     // Server can still have a factory, but we won't use it in this test
-    TestableServer test_server(io, 8080, /* handlers */ {},
-                               [](auto &io_ref, auto handlers) { return new session(io_ref); });
+    TestableServer test_server(io, 8080, /* handlers */ {}, test_factory);
 
     // Simulate a successful accept manually
     boost::system::error_code success(0, boost::system::generic_category());
@@ -65,7 +68,7 @@ TEST_F(ServerTest, HandleAcceptOnErrorDeletesSession) {
     class SelfDeletingMockSession : public session {
        public:
         SelfDeletingMockSession(boost::asio::io_service &io, bool &deleted_flag)
-            : session(io), deleted_ref(deleted_flag) {}
+            : session(io, {}, &HandlerRegistry::instance()), deleted_ref(deleted_flag) {}
 
         ~SelfDeletingMockSession() {
             deleted_ref = true;
@@ -75,8 +78,11 @@ TEST_F(ServerTest, HandleAcceptOnErrorDeletesSession) {
         bool &deleted_ref;
     };
 
-    TestableServer test_server(io, 8080, /* handlers */ {},
-                               [](auto &io_ref, auto handlers) { return new session(io_ref); });
+    SessionFactory test_factory = [&](auto &io_ref, auto handlers) {
+        return new session(io_ref, {}, &HandlerRegistry::instance());
+    };
+
+    TestableServer test_server(io, 8080, /* handlers */ {}, test_factory);
 
     // Use heap-allocated test session
     session *test_session = new SelfDeletingMockSession(io, deleted);
@@ -99,7 +105,7 @@ TEST_F(ServerTest, StartAcceptCreatesNewSession) {
     // Factory increments counter every time it's called
     SessionFactory test_factory = [&](auto &io_ref, auto handlers) {
         ++factory_call_count;
-        return new session(io_ref);  // use a real session
+        return new session(io_ref, {}, &HandlerRegistry::instance());
     };
 
     TestableServer test_server(io, 8080, /* handlers */ {}, test_factory);

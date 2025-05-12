@@ -7,31 +7,6 @@
 #include "gtest/gtest.h"
 #include "handler_registry.h"
 
-// tests that the handler can handle valid paths of different lengths
-TEST(EchoHandlerTest, CanHandleGoodPrefixes) {
-    EchoHandler eHandler("/echo", {});
-    // assumptions: correct handlers...
-    // - don't ignore slashes
-    // - allow any level of depth
-    // - are case-sensitive
-    EXPECT_TRUE(eHandler.can_handle("/echo"));
-    EXPECT_TRUE(eHandler.can_handle("/echo/hello"));
-    EXPECT_TRUE(eHandler.can_handle("/echo/hello/world/file"));
-}
-
-// tests that the handler correctly rejects non-matching paths
-TEST(EchoHandlerTest, CanHandleBadPrefixes) {
-    EchoHandler eHandler("/echo", {});
-    // assumptions: correct handlers...
-    // - don't ignore slashes
-    // - allow any level of depth
-    // - are case-sensitive
-    EXPECT_FALSE(eHandler.can_handle("echo"));
-    EXPECT_FALSE(eHandler.can_handle("/ech"));
-    EXPECT_FALSE(eHandler.can_handle("/ECHO"));
-    EXPECT_FALSE(eHandler.can_handle("/other"));
-}
-
 // tests that the handler correctly generates a GET response
 TEST(EchoHandlerTest, HandleGetRequestEchoesRequest) {
     EchoHandler eHandler("/echo", {});

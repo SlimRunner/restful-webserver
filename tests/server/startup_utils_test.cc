@@ -93,8 +93,8 @@ TEST_F(StartupUtilsFixture, ValidEchoHandler) {
 
     auto conf = parse_config(filename);
     ASSERT_TRUE(conf.has_value());
-    ASSERT_EQ(conf.value().port_number, 8080);
-    ASSERT_EQ(conf.value().handlers.size(), 1);
+    ASSERT_EQ(conf->port_number, 8080);
+    ASSERT_EQ(conf->route_map.size(), 1);
 }
 
 TEST_F(StartupUtilsFixture, ValidStaticHandler) {
@@ -109,8 +109,8 @@ TEST_F(StartupUtilsFixture, ValidStaticHandler) {
 
     auto conf = parse_config(filename);
     ASSERT_TRUE(conf.has_value());
-    ASSERT_EQ(conf.value().port_number, 80);
-    ASSERT_EQ(conf.value().handlers.size(), 1);
+    ASSERT_EQ(conf->port_number, 80);
+    ASSERT_EQ(conf->route_map.size(), 1);
 }
 
 TEST_F(StartupUtilsFixture, DisallowedTrailingSlash) {

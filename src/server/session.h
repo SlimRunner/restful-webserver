@@ -5,14 +5,14 @@
 #include <memory>
 #include <vector>
 
-#include "request_handlers/request_handler.h"
+#include "handler_registry.h"
+#include "request_handler.h"
 
 using boost::asio::ip::tcp;
 
 class session {
    public:
-    session(boost::asio::io_service &io_service,
-            std::vector<std::shared_ptr<RequestHandler>> handlers = {});
+    session(boost::asio::io_service &io_service, RoutingMap routes, IHandlerRegistry *registry);
     tcp::socket &socket();
     // Added a virtual destructor
     virtual ~session() = default;
@@ -36,10 +36,11 @@ class session {
     HttpRequest ParseRequest(const std::string &request_str);
 
     // List of request handlers
-    std::vector<std::shared_ptr<RequestHandler>> handlers_;
+    RoutingMap routes_;
 
     // Store the current response: this keeps response data alive during async operations
     std::string current_response_;
+    IHandlerRegistry *registry_;
 };
 
 #endif

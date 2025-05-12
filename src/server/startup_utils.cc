@@ -63,10 +63,7 @@ std::optional<config_payload> parse_config(std::string filepath) {
 
     if (!root_config_map.count(LOCATION_KEY)) {
         BOOST_LOG_TRIVIAL(warning) << "No handlers configured. Defaulting to EchoHandler.";
-        auto factory = HandlerRegistry::instance().get_factory("EchoHandler");
-        if (factory) {
-            payload.handlers.push_back(factory("/", {}));
-        }
+        payload.route_map.insert({"/", {"EchoHandler", {}}});
         return payload;
     }
 
@@ -92,7 +89,7 @@ std::optional<config_payload> parse_config(std::string filepath) {
             return {};
         }
 
-        if (!serving_path.empty() && serving_path.back() == '/') {
+        if (serving_path.length() > 1 && serving_path.back() == '/') {
             BOOST_LOG_TRIVIAL(error) << "Trailing slash found in serving path: " << serving_path;
             return {};
         }
@@ -109,41 +106,32 @@ std::optional<config_payload> parse_config(std::string filepath) {
             location_configs = unroll_one_level(child_block->statements_);
         }
 
+        RoutingPayload routeMetadata = {};
+        routeMetadata.handler = handler_name;
+
         // Build argument map from config block
-        std::map<std::string, std::string> args;
         for (const auto &[key, stmts] : location_configs) {
             for (const auto &stmt : stmts) {
-                if (stmt->tokens_.size() == 2) {
-                    args[key] = stmt->tokens_.at(1);
+                const auto &tokens = stmt->tokens_;
+                if (tokens.size() == 2) {
+                    BOOST_LOG_TRIVIAL(debug)
+                        << key << ": " << "" << tokens.at(0) << "->" << tokens.at(1);
+                    routeMetadata.arguments.insert({tokens.at(0), tokens.at(1)});
+                } else {
+                    BOOST_LOG_TRIVIAL(info)
+                        << "Skipped malformed config " << "with more than one value. "
+                        << "Handler name " << handler_name << " served at " << serving_path;
                 }
             }
         }
 
-        // Lookup factory in the registry
-        auto factory = HandlerRegistry::instance().get_factory(handler_name);
-        if (!factory) {
-            BOOST_LOG_TRIVIAL(warning) << "Unknown handler: " << handler_name;
-            continue;
-        }
-
-        try {
-            auto handler = factory(serving_path, args);
-            payload.handlers.push_back(handler);
-            BOOST_LOG_TRIVIAL(info)
-                << "Handler created: " << handler_name << " at " << serving_path;
-        } catch (const std::exception &e) {
-            BOOST_LOG_TRIVIAL(error) << "Handler creation failed: " << handler_name << " at "
-                                     << serving_path << ". Reason: " << e.what();
-            continue;
-        }
+        payload.route_map.insert({serving_path, routeMetadata});
+        BOOST_LOG_TRIVIAL(info) << "Handler mapped: " << handler_name << " at " << serving_path;
     }
 
-    if (payload.handlers.empty()) {
+    if (payload.route_map.empty()) {
         BOOST_LOG_TRIVIAL(warning) << "No valid handlers found. Defaulting to EchoHandler.";
-        auto factory = HandlerRegistry::instance().get_factory("EchoHandler");
-        if (factory) {
-            payload.handlers.push_back(factory("/", {}));
-        }
+        payload.route_map.insert({"/", {"EchoHandler", {}}});
     }
 
     return payload;

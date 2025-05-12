@@ -23,6 +23,10 @@ struct config_exception : public base_tagged_exception {
     using base_tagged_exception::base_tagged_exception;
 };
 
+struct registry_exception : public base_tagged_exception {
+    using base_tagged_exception::base_tagged_exception;
+};
+
 }  // namespace expt
 
 #endif

@@ -7,15 +7,13 @@
 #include <utility>
 #include <vector>
 
-#include "../config/config_parser.h"
-#include "request_handlers/echo_handler.h"
-#include "request_handlers/request_handler.h"
-#include "request_handlers/static_file_handler.h"
+#include "config_parser.h"
+#include "handler_registry.h"
 
 using shared_request_handler = std::shared_ptr<RequestHandler>;
 
 struct config_payload {
-    std::vector<shared_request_handler> handlers;
+    RoutingMap route_map;
     NginxConfig config;
     int port_number;
 };
