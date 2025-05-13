@@ -8,3 +8,7 @@ location /echo EchoHandler { # no arguments
 location /static StaticHandler {
     root ./static;
 }
+
+# Not Found handler for any / path
+location / NotFoundHandler { # no arguments
+}

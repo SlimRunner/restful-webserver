@@ -59,6 +59,7 @@ add_library(request_handlers
     src/server/request_handlers/echo_handler.cc
     src/server/request_handlers/static_file_handler.cc
     src/server/request_handlers/handler_registry.cc
+    src/server/request_handlers/not_found_handler.cc
 )
 
 # Add logger library
@@ -157,6 +158,7 @@ set(SERVER_TEST_SOURCES
   tests/server/request_handlers/request_handler_test.cc
   tests/server/request_handlers/echo_handler_test.cc
   tests/server/request_handlers/static_file_handler_test.cc
+  tests/server/request_handlers/not_found_handler_test.cc
   tests/server/tagged_exceptions_test.cc
   tests/server/startup_utils_test.cc
   # Add more test libraries here
