@@ -265,6 +265,18 @@ class IntegrationTests(HTTPServerTestCase):
         self.assertIn(b"Host: localhost", body)
         self.assertIn(b"Cookie: int-testing", body)
 
+    def test_404_handler(self):
+        self._logger.info("test_404_handler test")
+        status, reason, headers, body = self.send_request(
+            "GET",
+            "/",
+            headers={"Host": "localhost", "Cookie": "int-testing"},
+        )
+
+        self._logger.info("response body: %s", body)
+        self.assertEqual(status, 404)
+        self.assertIn("Content-Type", headers)
+        self.assertIn(b"404 Not Found", body)
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
