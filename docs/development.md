@@ -17,6 +17,7 @@
       - [Install GCloud](#install-gcloud)
     - [Setup SSH](#setup-ssh)
     - [Setup Devel](#setup-devel)
+  - [Recommended VS Code Extensions](#recommended-vs-code-extensions)
 
 # Development
 
@@ -52,11 +53,11 @@ Assuming that you have your devel tools one directory up.
 ### Run CMake
 You can run this manually or use our script `./run_build.sh` to configure everything. The command has the following modes:
 
-* `--clean`: Deletes the `build` and `build_coverage` directories.
-* `--build`: Builds the release version only.
-* `--int`: Updates the build with CMake and runs integration tests only.
-* `--cover`: Builds the coverage version only.
-* `-h`, `--help`: Get this same help in the terminal.
+- `--clean`: Deletes the `build` and `build_coverage` directories.
+- `--build`: Builds the release version only.
+- `--int`: Updates the build with CMake and runs integration tests only.
+- `--cover`: Builds the coverage version only.
+- `-h`, `--help`: Get this same help in the terminal.
 
 You can still manually `cd` into the desired build directory and run the appropriate `make` commands to test or execute the build.
 
@@ -247,3 +248,15 @@ cat ~/.ssh/id_ed25519.pub
 # copy the key
 ```
 Go back to [SSH keys](https://code.cs130.org/settings/#SSHKeys) in the Gerrit website, and add that key. Attempt to pull again. Now it should work.
+
+## Recommended VS Code Extensions
+- [Rewrap](https://marketplace.visualstudio.com/items/?itemName=stkb.rewrap)
+  - `ctrl+q` for automatic line wrapping.
+- [Bookmarks](https://marketplace.visualstudio.com/items/?itemName=alefragnani.Bookmarks)
+  - `ctrl+k` to add bookmarks, `ctrl+l` to go to the next one.
+- [Black Formatter](https://marketplace.visualstudio.com/items/?itemName=ms-python.black-formatter)
+  -  good formatter for Python code
+- [Git Graph](https://marketplace.visualstudio.com/items/?itemName=mhutchie.git-graph)
+- [Markdown All in One](https://marketplace.visualstudio.com/items/?itemName=yzhang.markdown-all-in-one)
+  - Allows you to automatically update and generate a table of contents.
+- [C++ Extension pack](https://marketplace.visualstudio.com/items/?itemName=ms-vscode.cpptools-extension-pack)

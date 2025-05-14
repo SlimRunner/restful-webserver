@@ -30,6 +30,8 @@ git review -f --reviewers kimoliatis01@g.ucla.edu
 git review -f --reviewers seamar@g.ucla.edu
 ```
 
+You may remove the `-f` flag and just keep the branch locally but be careful if you do that because you might mess your own commit if you mistakenly add commits on top of your branch instead of main.
+
 ## Retrieve Patch to Make Changes
 In the https://code.cs130.org/ UI, click the three dots inside your CL and click `download patch`. Copy the checkout command. It looks roughly like this:
 ```
