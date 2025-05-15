@@ -1,3 +1,11 @@
+- [Adding a New Request Handler](#adding-a-new-request-handler)
+  - [1. Create the Handler Header](#1-create-the-handler-header)
+  - [2. Implement the Handler](#2-implement-the-handler)
+  - [3. Force Link in Startup](#3-force-link-in-startup)
+  - [4. Update Build Configuration](#4-update-build-configuration)
+  - [5. Configure the Handler in Nginx‐Style Config](#5-configure-the-handler-in-nginxstyle-config)
+  - [6. Write and Add Tests](#6-write-and-add-tests)
+
 # Adding a New Request Handler
 
 This guide walks you through the steps to add a new HTTP request handler to our server, following the common `RequestHandler` API. We’ll use the [`NotFoundHandler`](../src/server/request_handlers/not_found_handler.{h,cc}) as a running example.
