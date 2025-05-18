@@ -62,6 +62,13 @@ add_library(request_handlers
     src/server/request_handlers/not_found_handler.cc
 )
 
+# Add filesystem library
+add_library(filesystem
+    src/server/filesystem/filesystem_interface.cc
+    src/server/filesystem/mock_filesystem.cc
+    src/server/filesystem/real_filesystem.cc
+)
+
 # Add logger library
 add_library(logger
   src/util/logger.cc
@@ -73,6 +80,8 @@ include_directories(
     src/config
     src/server/tests
     src/server/request_handlers
+    src/server/filesystem
+    src/server/exceptions
     src/util
     tests/
 )
@@ -161,6 +170,7 @@ set(SERVER_TEST_SOURCES
   tests/server/request_handlers/not_found_handler_test.cc
   tests/server/tagged_exceptions_test.cc
   tests/server/startup_utils_test.cc
+  tests/server/filesystem/filesystem_test.cc
   # Add more test libraries here
 )
 
@@ -180,6 +190,7 @@ foreach(test_src ${SERVER_TEST_SOURCES})
     gmock_main
     server_logic
     request_handlers
+    filesystem
     startup_utils
   )
 
@@ -217,6 +228,6 @@ set_tests_properties(integration_test PROPERTIES
 # Add code coverage report
 include(cmake/CodeCoverageReportConfig.cmake)
 generate_coverage_report(
-    TARGETS webserver config_parser server_logic request_handlers startup_utils
+    TARGETS webserver config_parser server_logic request_handlers filesystem startup_utils
     TESTS config_parser_test ${SERVER_TEST_NAMES}
 )
