@@ -3,10 +3,8 @@
 #include <boost/log/trivial.hpp>
 #include <sstream>
 
-#include "file_io_exception.h"
-#include "invalid_id_exception.h"
-#include "not_found_exception.h"
 #include "real_filesystem.h"
+#include "tagged_exceptions.h"
 
 volatile int force_link_entity_handler = 0;
 
@@ -117,17 +115,17 @@ std::unique_ptr<HttpResponse> EntityHandler::handle_request(const HttpRequest& r
             response.headers["Content-Length"] = std::to_string(response.body.size());
             BOOST_LOG_TRIVIAL(warning) << "Unsupported method: " << request.method;
         }
-    } catch (const NotFoundException& e) {
+    } catch (const expt::not_found_exception& e) {
         response.status = StatusCode::NOT_FOUND;
         response.body = e.what();
         response.headers["Content-Length"] = std::to_string(response.body.size());
         BOOST_LOG_TRIVIAL(warning) << "NotFoundException: " << e.what();
-    } catch (const InvalidIdException& e) {
+    } catch (const expt::invalid_id_exception& e) {
         response.status = StatusCode::BAD_REQUEST;
         response.body = e.what();
         response.headers["Content-Length"] = std::to_string(response.body.size());
         BOOST_LOG_TRIVIAL(warning) << "InvalidIdException: " << e.what();
-    } catch (const FileIOException& e) {
+    } catch (const expt::file_io_exception& e) {
         response.status = StatusCode::INTERNAL_SERVER_ERROR;
         response.body = e.what();
         response.headers["Content-Length"] = std::to_string(response.body.size());

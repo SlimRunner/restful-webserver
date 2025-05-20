@@ -1,8 +1,7 @@
 #include "mock_filesystem.h"
 
 #include "gtest/gtest.h"
-#include "invalid_id_exception.h"
-#include "not_found_exception.h"
+#include "tagged_exceptions.h"
 
 class MockFilesystemTest : public testing::Test {
    protected:
@@ -29,7 +28,7 @@ TEST_F(MockFilesystemTest, WriteAndReadValidEntity) {
 }
 
 TEST_F(MockFilesystemTest, ReadMissingThrowsNotFound) {
-    EXPECT_THROW(fs.read("Books", "42"), NotFoundException);
+    EXPECT_THROW(fs.read("Books", "42"), expt::not_found_exception);
 }
 
 TEST_F(MockFilesystemTest, RemoveExistingEntrySucceeds) {
@@ -43,7 +42,7 @@ TEST_F(MockFilesystemTest, RemoveExistingEntrySucceeds) {
 }
 
 TEST_F(MockFilesystemTest, RemoveMissingThrowsNotFound) {
-    EXPECT_THROW(fs.remove("Movies", "7"), NotFoundException);
+    EXPECT_THROW(fs.remove("Movies", "7"), expt::not_found_exception);
 }
 
 TEST_F(MockFilesystemTest, CheckValidIdDoesNotThrow) {
@@ -51,8 +50,8 @@ TEST_F(MockFilesystemTest, CheckValidIdDoesNotThrow) {
 }
 
 TEST_F(MockFilesystemTest, CheckInvalidIdThrows) {
-    EXPECT_THROW(fs.write("F1", "-18", R"({"driver":"Lance"})"), InvalidIdException);
-    EXPECT_THROW(fs.write("F1", "norris", R"({"driver":"Lando"})"), InvalidIdException);
+    EXPECT_THROW(fs.write("F1", "-18", R"({"driver":"Lance"})"), expt::invalid_id_exception);
+    EXPECT_THROW(fs.write("F1", "norris", R"({"driver":"Lando"})"), expt::invalid_id_exception);
 }
 
 TEST_F(MockFilesystemTest, ListIdsReturnsCorrectValues) {

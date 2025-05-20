@@ -1,8 +1,6 @@
 #ifndef ENTITY_HANDLER_H
 #define ENTITY_HANDLER_H
 
-#include "file_io_exception.h"
-#include "not_found_exception.h"
 #include "real_filesystem.h"
 #include "request_handler.h"
 

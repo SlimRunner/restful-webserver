@@ -2,7 +2,7 @@
 
 #include <boost/log/trivial.hpp>
 
-#include "invalid_id_exception.h"
+#include "tagged_exceptions.h"
 
 void Filesystem::check_id(const std::string& id) {
     try {
@@ -14,12 +14,13 @@ void Filesystem::check_id(const std::string& id) {
             BOOST_LOG_TRIVIAL(warning)
                 << "Invalid id (" << id << "): ID must be a positive integer";
 
-            throw InvalidIdException("Invalid id (" + id + "): ID must be a positive integer");
+            throw expt::invalid_id_exception("Invalid id (" + id +
+                                             "): ID must be a positive integer");
         }
     } catch (...) {
         BOOST_LOG_TRIVIAL(warning) << "Invalid id (" << id << "): ID must be a positive integer";
 
-        throw InvalidIdException("Invalid id (" + id + "): ID must be a positive integer");
+        throw expt::invalid_id_exception("Invalid id (" + id + "): ID must be a positive integer");
     }
 
     BOOST_LOG_TRIVIAL(debug) << "Id is valid: " << id;

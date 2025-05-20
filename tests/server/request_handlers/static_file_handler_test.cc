@@ -19,7 +19,6 @@ class StaticFileHandlerText : public ::testing::Test {
    private:
     boost::filesystem::path tempDir = {};
     boost::filesystem::path baseDir = {};
-    std::string BASE_TAG = "/base";
     std::string oobFile = "hackerman.md";
     FileMapRef _files;
 
@@ -100,6 +99,12 @@ class StaticFileHandlerText : public ::testing::Test {
         return this->_files;
     }
 };
+
+// test that constructor throws when "root" property is missing
+TEST_F(StaticFileHandlerText, HandleRootMissing) {
+    const std::string PREFIX = "/base";
+    EXPECT_THROW(auto handler = StaticFileHandler(PREFIX, {{"other", "/"}}), std::runtime_error);
+}
 
 // test files that use all of the MimeTypes and verify that it can read
 // them

@@ -4,7 +4,7 @@
 #include <boost/log/trivial.hpp>
 #include <stdexcept>
 
-#include "not_found_exception.h"
+#include "tagged_exceptions.h"
 
 bool MockFilesystem::exists(const std::string& entity, const std::string& id) {
     if (!data_.count(entity)) {
@@ -18,7 +18,8 @@ std::string MockFilesystem::read(const std::string& entity, const std::string& i
         BOOST_LOG_TRIVIAL(warning)
             << "MockFilesystem: No such entity or ID: " << entity << "/" << id;
 
-        throw NotFoundException("MockFilesystem: No such entity or ID: " + entity + "/" + id);
+        throw expt::not_found_exception("MockFilesystem: No such entity or ID: " + entity + "/" +
+                                        id);
     }
     return data_[entity][id];
 }
@@ -37,7 +38,8 @@ void MockFilesystem::remove(const std::string& entity, const std::string& id) {
         BOOST_LOG_TRIVIAL(warning)
             << "MockFilesystem: Could not remove file: " << entity << "/" << id;
 
-        throw NotFoundException("MockFilesystem: Could not remove file: " + entity + "/" + id);
+        throw expt::not_found_exception("MockFilesystem: Could not remove file: " + entity + "/" +
+                                        id);
     }
 
     BOOST_LOG_TRIVIAL(debug) << "MockFilesystem: Removing " << entity << "/" << id;

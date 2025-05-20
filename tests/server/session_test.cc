@@ -50,7 +50,22 @@ class MockHandler : public RequestHandler {
     std::unique_ptr<HttpResponse> handle_request(const HttpRequest &request) override {
         HttpResponse res;
         res.status = StatusCode::OK;  // Set status to 200 OK
-        res.body = path_prefix_;      // Keep path prefix for verification
+        if (request.headers.count("set-status")) {
+            const auto st = request.headers.at("set-status");
+            if (st == "OK")
+                res.status = StatusCode::OK;
+            else if (st == "BAD_REQUEST")
+                res.status = StatusCode::BAD_REQUEST;
+            else if (st == "FORBIDDEN")
+                res.status = StatusCode::FORBIDDEN;
+            else if (st == "NOT_FOUND")
+                res.status = StatusCode::NOT_FOUND;
+            else if (st == "INTERNAL_SERVER_ERROR")
+                res.status = StatusCode::INTERNAL_SERVER_ERROR;
+            else
+                res.status = static_cast<StatusCode>(-1);
+        }
+        res.body = path_prefix_;  // Keep path prefix for verification
         res.headers["Content-Type"] = "text/plain";
         res.headers["Content-Length"] = std::to_string(res.body.size());
         return std::make_unique<HttpResponse>(res);
@@ -406,4 +421,72 @@ TEST_F(SessionTest, NoMatchingPrefixReturns404) {
     session_->handle_read(successCode, fullReq.size());
     EXPECT_FALSE(session_->already_deleted_);
     EXPECT_NE(session_->current_response_.find("404 Not Found"), std::string::npos);
+}
+
+// coerce a 403 error to test if prints correct message
+TEST_F(SessionTest, Coerce403Forbidden) {
+    session_->routes_.insert({"/", {{"/"}, {}}});
+
+    std::string fullReq =
+        "GET / HTTP/1.1\r\n"
+        "set-status: FORBIDDEN\r\n"
+        "\r\n";
+    boost::system::error_code successCode{};
+
+    session_->set_request(fullReq);
+    session_->handle_read(successCode, fullReq.size());
+    EXPECT_FALSE(session_->already_deleted_);
+    EXPECT_NE(session_->current_response_.find("403 Forbidden"), std::string::npos);
+}
+
+// coerce a 500 error to test if it executes
+TEST_F(SessionTest, Coerce500InternalError) {
+    session_->routes_.insert({"/", {{"/"}, {}}});
+
+    std::string fullReq =
+        "GET / HTTP/1.1\r\n"
+        "set-status: INTERNAL_SERVER_ERROR\r\n"
+        "\r\n";
+    boost::system::error_code successCode{};
+
+    session_->set_request(fullReq);
+    session_->handle_read(successCode, fullReq.size());
+    EXPECT_FALSE(session_->already_deleted_);
+    EXPECT_NE(session_->current_response_.find("500 Internal"), std::string::npos);
+}
+
+// coerce an Unknown Status error to test if it executes
+TEST_F(SessionTest, CoerceUnknownError) {
+    session_->routes_.insert({"/", {{"/"}, {}}});
+
+    std::string fullReq =
+        "GET / HTTP/1.1\r\n"
+        "set-status: unknown\r\n"
+        "\r\n";
+    boost::system::error_code successCode{};
+
+    session_->set_request(fullReq);
+    session_->handle_read(successCode, fullReq.size());
+    EXPECT_FALSE(session_->already_deleted_);
+    EXPECT_NE(session_->current_response_.find("500 Internal"), std::string::npos);
+}
+
+TEST_F(SessionTest, HandleLargeContentLengthHeader) {
+    // This creates a request with a small actual size but huge claimed Content-Length
+    std::string request =
+        "POST /echo HTTP/1.1\r\n"
+        "Host: localhost\r\n"
+        "Content-Length: 1000000000\r\n"  // 1 GB, deliberately larger than max_content_length_
+        "\r\n"
+        "small actual content";
+
+    boost::system::error_code successCode{};
+
+    session_->set_request(request);
+    session_->handle_read(successCode, request.size());
+
+    // Verify we got the correct 413 response
+    EXPECT_FALSE(session_->already_deleted_);
+    EXPECT_NE(session_->current_response_.find("413 Payload Too Large"), std::string::npos);
+    EXPECT_NE(session_->current_response_.find("Connection: close"), std::string::npos);
 }

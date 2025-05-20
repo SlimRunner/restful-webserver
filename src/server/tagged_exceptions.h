@@ -27,6 +27,18 @@ struct registry_exception : public base_tagged_exception {
     using base_tagged_exception::base_tagged_exception;
 };
 
+struct file_io_exception : public base_tagged_exception {
+    using base_tagged_exception::base_tagged_exception;
+};
+
+struct invalid_id_exception : public base_tagged_exception {
+    using base_tagged_exception::base_tagged_exception;
+};
+
+struct not_found_exception : public base_tagged_exception {
+    using base_tagged_exception::base_tagged_exception;
+};
+
 }  // namespace expt
 
 #endif

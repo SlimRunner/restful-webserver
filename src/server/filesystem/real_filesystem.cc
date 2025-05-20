@@ -7,8 +7,7 @@
 #include <sstream>
 #include <stdexcept>
 
-#include "file_io_exception.h"
-#include "not_found_exception.h"
+#include "tagged_exceptions.h"
 
 namespace fs = std::filesystem;
 
@@ -31,7 +30,7 @@ std::string RealFilesystem::read(const std::string& entity, const std::string& i
     if (!exists(entity, id)) {
         BOOST_LOG_TRIVIAL(warning) << "No such entity or ID: " << entity << "/" << id;
 
-        throw NotFoundException("No such entity or ID: " + entity + "/" + id);
+        throw expt::not_found_exception("No such entity or ID: " + entity + "/" + id);
     }
 
     std::string path = make_path(entity, id);
@@ -39,7 +38,7 @@ std::string RealFilesystem::read(const std::string& entity, const std::string& i
     if (!file.is_open()) {
         BOOST_LOG_TRIVIAL(warning) << "Could not open file for reading: " << path;
 
-        throw FileIOException("Could not open file for reading: " + path);
+        throw expt::file_io_exception("Could not open file for reading: " + path);
     }
 
     std::ostringstream ss;
@@ -59,7 +58,7 @@ void RealFilesystem::write(const std::string& entity, const std::string& id,
     if (!file.is_open()) {
         BOOST_LOG_TRIVIAL(warning) << "Could not open file for writing: " << path;
 
-        throw FileIOException("Could not open file for writing: " + path);
+        throw expt::file_io_exception("Could not open file for writing: " + path);
     }
 
     BOOST_LOG_TRIVIAL(info) << "Writing " << data << " to " << path;
@@ -75,7 +74,7 @@ void RealFilesystem::remove(const std::string& entity, const std::string& id) {
     if (!fs::remove(path)) {
         BOOST_LOG_TRIVIAL(warning) << "Could not remove file: " << path;
 
-        throw NotFoundException("Could not remove file: " + path);
+        throw expt::not_found_exception("Could not remove file: " + path);
     }
 }
 

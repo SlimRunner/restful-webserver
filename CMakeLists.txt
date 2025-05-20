@@ -53,6 +53,10 @@ add_library(startup_utils
     src/server/startup_utils.cc
 )
 
+add_library(exceptions
+  src/server/tagged_exceptions.cc
+)
+
 # Add filesystem library
 add_library(filesystem
     src/server/filesystem/filesystem_interface.cc
@@ -73,6 +77,12 @@ add_library(request_handlers
 
 target_link_libraries(request_handlers PRIVATE filesystem)
 
+# Ensure filesystem links to exceptions
+target_link_libraries(filesystem PRIVATE exceptions)
+
+# request_handlers needs both filesystem and exceptions
+target_link_libraries(request_handlers PRIVATE filesystem exceptions)
+
 # Add logger library
 add_library(logger
   src/util/logger.cc
@@ -85,7 +95,6 @@ include_directories(
     src/server/tests
     src/server/request_handlers
     src/server/filesystem
-    src/server/exceptions
     src/util
     tests/
 )
@@ -96,7 +105,6 @@ add_executable(webserver
 add_library(server_logic
   src/server/server.cc
   src/server/session.cc
-  src/server/tagged_exceptions.cc
 )
 
 # Reformating to  fit in screen. Adding
@@ -130,6 +138,7 @@ target_link_libraries(startup_utils
 )
 target_link_libraries(server_logic
   request_handlers
+  exceptions
   logger
   Boost::log_setup
   Boost::log
@@ -173,9 +182,11 @@ set(SERVER_TEST_SOURCES
   tests/server/request_handlers/static_file_handler_test.cc
   tests/server/request_handlers/not_found_handler_test.cc
   tests/server/request_handlers/entity_handler_test.cc
+  tests/server/request_handlers/handler_registry_test.cc
   tests/server/tagged_exceptions_test.cc
   tests/server/startup_utils_test.cc
   tests/server/filesystem/mock_filesystem_test.cc
+  tests/server/filesystem/real_filesystem_test.cc
   # Add more test libraries here
 )
 
