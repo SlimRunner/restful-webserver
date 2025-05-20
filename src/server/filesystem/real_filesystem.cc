@@ -33,7 +33,6 @@ std::string RealFilesystem::read(const std::string& entity, const std::string& i
     if (!exists(entity, id)) {
         BOOST_LOG_TRIVIAL(warning) << "No such entity or ID: " << entity << "/" << id;
 
-        // TODO: please catch this in the api request handler and return 404 http response
         throw NotFoundException("No such entity or ID: " + entity + "/" + id);
     }
 
@@ -42,7 +41,6 @@ std::string RealFilesystem::read(const std::string& entity, const std::string& i
     if (!file.is_open()) {
         BOOST_LOG_TRIVIAL(warning) << "Could not open file for reading: " << path;
 
-        // TODO: please catch this in the api request handler and return 500 http response
         throw FileIOException("Could not open file for reading: " + path);
     }
 
@@ -62,7 +60,6 @@ void RealFilesystem::write(const std::string& entity, const std::string& id, con
     if (!file.is_open()) {
         BOOST_LOG_TRIVIAL(warning) << "Could not open file for writing: " << path;
 
-        // TODO: please catch this in the api request handler and return 500 http response
         throw FileIOException("Could not open file for writing: " + path);
     }
 
@@ -79,7 +76,6 @@ void RealFilesystem::remove(const std::string& entity, const std::string& id) {
     if (!fs::remove(path)) {
         BOOST_LOG_TRIVIAL(warning) << "Could not remove file: " << path;
 
-        // TODO: please catch this in the api request handler and return 404 http response
         throw NotFoundException("Could not remove file: " + path);
     }
 }

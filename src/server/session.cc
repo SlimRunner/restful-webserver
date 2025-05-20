@@ -141,10 +141,24 @@ void session::handle_read(const boost::system::error_code &error, size_t bytes_t
                 while (!value.empty() && (value[0] == ' ' || value[0] == '\t'))
                     value.erase(0, 1);
                 content_length = std::stoul(value);
+                if (content_length > max_content_length_) {
+                    BOOST_LOG_TRIVIAL(warning) << "Content-Length too large: " << content_length;
+
+                    HttpResponse response;
+                    response.status = StatusCode::PAYLOAD_TOO_LARGE;
+                    response.body = "413 Payload Too Large";
+                    response.headers["Content-Type"] = "text/plain";
+                    response.headers["Connection"] = "close";
+                    response.headers["Content-Length"] = std::to_string(response.body.size());
+
+                    current_response_ = response.ToString();
+                    boost::asio::async_write(socket_, boost::asio::buffer(current_response_),
+                                            boost::bind(&session::handle_write, this, _1));
+                    return;
+                }
             }
         }
 
-        // i hate whichever dumbass wrote this because u didnt ever read the request properly i actually spent like an hour trying to figure this sht out uninstall
         // Wait for body to arrive
         size_t total_request_size = header_end + 4 + content_length;
         if (request_buffer_.size() < total_request_size) {

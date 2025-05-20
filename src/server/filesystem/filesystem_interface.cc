@@ -13,13 +13,11 @@ void Filesystem::check_id(const std::string& id) {
         if (numeric_id <= 0) {
             BOOST_LOG_TRIVIAL(warning) << "Invalid id (" << id << "): ID must be a positive integer";
 
-            // TODO: please catch this in the api request handler and return 400 http response
             throw InvalidIdException("Invalid id (" + id + "): ID must be a positive integer");
         }
     } catch (...) {
         BOOST_LOG_TRIVIAL(warning) << "Invalid id (" << id << "): ID must be a positive integer";
 
-        // TODO: please catch this in the api request handler and return 400 http response
         throw InvalidIdException("Invalid id (" + id + "): ID must be a positive integer");
     }
     

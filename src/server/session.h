@@ -32,6 +32,8 @@ class session {
     bool already_deleted_ = false;
     // max request size = 8 KB = 8192 bytes to prevent buffer overflow
     static const size_t max_request_size_ = 8192;
+    // max content length = 1 MB to avoid memory exhaustion or socket starvation
+    static const size_t max_content_length_ = 1 * 1024 * 1024;
 
     HttpRequest ParseRequest(const std::string &request_str);
 

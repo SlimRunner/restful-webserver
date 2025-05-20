@@ -18,7 +18,6 @@ std::string MockFilesystem::read(const std::string& entity, const std::string& i
     if (!exists(entity, id)) {
         BOOST_LOG_TRIVIAL(warning) << "MockFilesystem: No such entity or ID: " << entity << "/" << id;
 
-        // TODO: please catch this in the api request handler and return 404 http response
         throw NotFoundException("MockFilesystem: No such entity or ID: " + entity + "/" + id);
     }
     return data_[entity][id];
@@ -36,7 +35,6 @@ void MockFilesystem::remove(const std::string& entity, const std::string& id) {
     if (!exists(entity, id)) {
         BOOST_LOG_TRIVIAL(warning) << "MockFilesystem: Could not remove file: " << entity << "/" << id;
 
-        // TODO: please catch this in the api request handler and return 404 http response
         throw NotFoundException("MockFilesystem: Could not remove file: " + entity + "/" + id);
     }
 
