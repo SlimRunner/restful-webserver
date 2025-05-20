@@ -122,17 +122,42 @@ void session::handle_read(const boost::system::error_code &error, size_t bytes_t
     request_buffer_ += std::string(data_, bytes_transferred);
 
     while (true) {
+
         size_t header_end = request_buffer_.find("\r\n\r\n");
         if (header_end == std::string::npos) {
-            break;  // wait for complete request
+            break; // wait for full headers
         }
 
-        // Extract one full request
-        std::string full_request = request_buffer_.substr(0, header_end + 4);
-        request_buffer_ = request_buffer_.substr(header_end + 4);  // keep remainder
+        // Extract headers
+        std::string header_part = request_buffer_.substr(0, header_end + 4);
 
-        // Parse the HTTP request
+        // Extract content length from headers (temporarily parse it here)
+        std::istringstream temp_stream(header_part);
+        std::string line;
+        size_t content_length = 0;
+        while (std::getline(temp_stream, line) && line != "\r") {
+            if (line.find("Content-Length:") == 0) {
+                std::string value = line.substr(strlen("Content-Length:"));
+                while (!value.empty() && (value[0] == ' ' || value[0] == '\t'))
+                    value.erase(0, 1);
+                content_length = std::stoul(value);
+            }
+        }
 
+        // i hate whichever dumbass wrote this because u didnt ever read the request properly i actually spent like an hour trying to figure this sht out uninstall
+        // Wait for body to arrive
+        size_t total_request_size = header_end + 4 + content_length;
+        if (request_buffer_.size() < total_request_size) {
+            break; // wait for full body
+        }
+
+        // Extract full request (headers + body)
+        std::string full_request = request_buffer_.substr(0, total_request_size);
+
+        // Trim the buffer
+        request_buffer_ = request_buffer_.substr(total_request_size);
+
+        // Parse the full request
         HttpRequest request = ParseRequest(full_request);
 
         // Check HTTP version - only accepts HTTP/1.1

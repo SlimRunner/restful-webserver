@@ -13,9 +13,9 @@
 
 namespace fs = std::filesystem;
 
-RealFilesystem::RealFilesystem(const std::string& data_path_)
-    : data_path_(data_path_) {
-    fs::create_directories(data_path_);
+RealFilesystem::RealFilesystem(const std::string& data_path)
+    : data_path_(data_path) {
+    fs::create_directories(data_path);
 }
 
 std::string RealFilesystem::make_path(const std::string& entity, const std::string& id) const {
@@ -66,7 +66,7 @@ void RealFilesystem::write(const std::string& entity, const std::string& id, con
         throw FileIOException("Could not open file for writing: " + path);
     }
 
-    BOOST_LOG_TRIVIAL(info) << "Writing to " << path;
+    BOOST_LOG_TRIVIAL(info) << "Writing " << data << " to " << path;
 
     file << data;
 }

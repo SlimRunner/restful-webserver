@@ -8,6 +8,8 @@ import http.client
 import os
 import socket
 from logging.handlers import RotatingFileHandler
+import json
+import uuid
 
 # use this variable as root for what is in tests/common_files
 test_data_dir = os.environ.get("TEST_DATA_DIR")
@@ -227,6 +229,7 @@ class IntegrationTests(HTTPServerTestCase):
             "GET", "/echo", body="hello world"
         )
         self.assertEqual(status, 200)
+        print(body)
 
     def test_bad_prefix(self):
         status, reason, headers, body = self.send_request("GET", "/foobar")
@@ -277,6 +280,96 @@ class IntegrationTests(HTTPServerTestCase):
         self.assertEqual(status, 404)
         self.assertIn("Content-Type", headers)
         self.assertIn(b"404 Not Found", body)
+
+    def test_entity_post_and_get(self):
+        entity_type = "Shoes"
+        test_data = {"brand": "Nike", "size": 10}
+        post_body = json.dumps(test_data)
+
+        # POST: Create new entity
+        status, _, headers, body = self.send_request(
+            "POST",
+            f"/api/{entity_type}",
+            headers={"Content-Type": "application/json"},
+            body=post_body,
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(headers["Content-Type"], "application/json")
+        response_json = json.loads(body)
+        new_id = response_json["id"]
+
+        # GET: Retrieve entity
+        status, _, headers, body = self.send_request(
+            "GET", f"/api/{entity_type}/{new_id}"
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body), test_data)
+
+    def test_entity_put_and_get(self):
+        entity_type = "Books"
+        new_id = 10
+        test_data = {"title": "1984", "author": "George Orwell"}
+        put_body = json.dumps(test_data)
+
+        # PUT: Create or update entity
+        status, _, _, _ = self.send_request(
+            "PUT",
+            f"/api/{entity_type}/{new_id}",
+            headers={"Content-Type": "application/json"},
+            body=put_body,
+        )
+        self.assertEqual(status, 200)
+
+        # GET: Retrieve entity
+        status, _, _, body = self.send_request("GET", f"/api/{entity_type}/{new_id}")
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body), test_data)
+
+    def test_entity_delete(self):
+        entity_type = "Gadgets"
+        test_data = {"type": "phone", "model": "Pixel"}
+        post_body = json.dumps(test_data)
+
+        # Create entity
+        status, _, _, body = self.send_request(
+            "POST",
+            f"/api/{entity_type}",
+            headers={"Content-Type": "application/json"},
+            body=post_body,
+        )
+        self.assertEqual(status, 200)
+        new_id = json.loads(body)["id"]
+
+        # Delete entity
+        status, _, _, _ = self.send_request("DELETE", f"/api/{entity_type}/{new_id}")
+        self.assertEqual(status, 200)
+
+        # Verify it’s gone
+        status, _, _, _ = self.send_request("GET", f"/api/{entity_type}/{new_id}")
+        self.assertEqual(status, 404)
+
+    def test_entity_list(self):
+        entity_type = "Animals"
+
+        # Add two entities
+        ids = []
+        for animal in ["dog", "cat"]:
+            status, _, _, body = self.send_request(
+                "POST",
+                f"/api/{entity_type}",
+                headers={"Content-Type": "application/json"},
+                body=json.dumps({"name": animal}),
+            )
+            self.assertEqual(status, 200)
+            ids.append(json.loads(body)["id"])
+
+        # GET list of IDs
+        status, _, _, body = self.send_request("GET", f"/api/{entity_type}")
+        self.assertEqual(status, 200)
+        id_list = json.loads(body)
+        for i in ids:
+            self.assertIn(i, id_list)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

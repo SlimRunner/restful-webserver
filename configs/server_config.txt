@@ -1,7 +1,8 @@
 port 8081;
 
 # Echo handler for /echo path
-location /echo EchoHandler { # no arguments
+location /echo EchoHandler {
+    # no arguments
 }
 
 # Static file handler for /static path
@@ -9,6 +10,12 @@ location /static StaticHandler {
     root ./static;
 }
 
+# Entity handler for /api/entity path
+location /api EntityHandler {
+    root /tmp/crud;
+}
+
 # Not Found handler for any / path
-location / NotFoundHandler { # no arguments
+location / NotFoundHandler {
+    # no arguments
 }

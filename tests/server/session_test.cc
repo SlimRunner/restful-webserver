@@ -4,9 +4,11 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "static_file_handler.h"
+#include "entity_handler.h"
 
 extern volatile int force_link_echo_handler;
 extern volatile int force_link_static_handler;
+extern volatile int force_link_entity_handler;
 
 // Made a testableSession class to test the private stuff in session class
 class TestableSession : public session {
@@ -83,6 +85,7 @@ class SessionTest : public ::testing::Test {
     void SetUp() override {
         (void)force_link_echo_handler;
         (void)force_link_static_handler;
+        (void)force_link_entity_handler;
 
         RoutingMap routes_;
 
@@ -109,6 +112,7 @@ class SessionTestReal : public ::testing::Test {
     void SetUp() override {
         (void)force_link_echo_handler;
         (void)force_link_static_handler;
+        (void)force_link_entity_handler;
 
         IHandlerRegistry *registry = &HandlerRegistry::instance();
         RoutingMap routes_;

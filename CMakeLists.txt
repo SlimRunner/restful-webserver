@@ -53,6 +53,14 @@ add_library(startup_utils
     src/server/startup_utils.cc
 )
 
+# Add filesystem library
+add_library(filesystem
+    src/server/filesystem/filesystem_interface.cc
+    src/server/filesystem/mock_filesystem.cc
+    src/server/filesystem/real_filesystem.cc
+)
+
+
 # Add request handlers library
 add_library(request_handlers
     src/server/request_handlers/request_handler.cc
@@ -60,14 +68,10 @@ add_library(request_handlers
     src/server/request_handlers/static_file_handler.cc
     src/server/request_handlers/handler_registry.cc
     src/server/request_handlers/not_found_handler.cc
+    src/server/request_handlers/entity_handler.cc
 )
 
-# Add filesystem library
-add_library(filesystem
-    src/server/filesystem/filesystem_interface.cc
-    src/server/filesystem/mock_filesystem.cc
-    src/server/filesystem/real_filesystem.cc
-)
+target_link_libraries(request_handlers PRIVATE filesystem)
 
 # Add logger library
 add_library(logger
@@ -168,6 +172,7 @@ set(SERVER_TEST_SOURCES
   tests/server/request_handlers/echo_handler_test.cc
   tests/server/request_handlers/static_file_handler_test.cc
   tests/server/request_handlers/not_found_handler_test.cc
+  tests/server/request_handlers/entity_handler_test.cc
   tests/server/tagged_exceptions_test.cc
   tests/server/startup_utils_test.cc
   tests/server/filesystem/filesystem_test.cc

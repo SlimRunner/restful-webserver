@@ -17,6 +17,7 @@ using nginx_config_map = std::map<std::string, std::vector<nginx_shared_statemen
 extern volatile int force_link_echo_handler;
 extern volatile int force_link_static_handler;
 extern volatile int force_link_not_found_handler;
+extern volatile int force_link_entity_handler;
 
 static nginx_config_map unroll_one_level(const std::vector<nginx_shared_statement> &);
 static bool string_is_quoted(std::string);
@@ -40,6 +41,8 @@ std::optional<config_payload> parse_config(std::string filepath) {
     (void)force_link_echo_handler;
     (void)force_link_static_handler;
     (void)force_link_not_found_handler;
+    (void)force_link_entity_handler;
+
 
     NginxConfigParser config_parser;
     NginxConfig config;
