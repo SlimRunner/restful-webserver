@@ -1,10 +1,10 @@
 #ifndef ENTITY_HANDLER_H
 #define ENTITY_HANDLER_H
 
-#include "request_handler.h"
-#include "real_filesystem.h"
 #include "file_io_exception.h"
 #include "not_found_exception.h"
+#include "real_filesystem.h"
+#include "request_handler.h"
 
 class EntityHandler : public RequestHandler {
    public:
@@ -17,7 +17,6 @@ class EntityHandler : public RequestHandler {
 
    protected:
     std::unique_ptr<Filesystem> fs_;
-
 
    private:
     std::string path_prefix_;

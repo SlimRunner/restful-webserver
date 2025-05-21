@@ -5,7 +5,7 @@
 #include "filesystem_interface.h"
 
 class MockFilesystem : public Filesystem {
-public:
+   public:
     bool exists(const std::string& entity, const std::string& id) override;
     std::string read(const std::string& entity, const std::string& id) override;
     void write(const std::string& entity, const std::string& id, const std::string& data) override;
@@ -15,6 +15,6 @@ public:
 
     void reset();
 
-private:
+   private:
     std::map<std::string, std::map<std::string, std::string>> data_;
 };

@@ -1,26 +1,26 @@
 #include "entity_handler.h"
-#include "real_filesystem.h"
-#include "not_found_exception.h"
-#include "invalid_id_exception.h"
-#include "file_io_exception.h"
 
 #include <boost/log/trivial.hpp>
 #include <sstream>
 
+#include "file_io_exception.h"
+#include "invalid_id_exception.h"
+#include "not_found_exception.h"
+#include "real_filesystem.h"
+
 volatile int force_link_entity_handler = 0;
 
-EntityHandler::EntityHandler(
-    const std::string& path_prefix,
-    const std::map<std::string, std::string>& args)
-    : path_prefix_(path_prefix)
-{
+EntityHandler::EntityHandler(const std::string& path_prefix,
+                             const std::map<std::string, std::string>& args)
+    : path_prefix_(path_prefix) {
     auto it = args.find("root");
     if (it == args.end()) {
         throw std::runtime_error("EntityHandler requires a 'root' argument.");
     }
 
     base_dir_ = it->second;
-    BOOST_LOG_TRIVIAL(debug) << "EntityHandler constructed with path_prefix: " << path_prefix_ << ", base_dir: " << base_dir_;
+    BOOST_LOG_TRIVIAL(debug) << "EntityHandler constructed with path_prefix: " << path_prefix_
+                             << ", base_dir: " << base_dir_;
 }
 
 void EntityHandler::set_filesystem(std::unique_ptr<Filesystem> fs) {
@@ -32,14 +32,14 @@ Filesystem* EntityHandler::get_filesystem() const {
     return fs_.get();
 }
 
-std::unique_ptr<HttpResponse> EntityHandler::handle_request(const HttpRequest& request)
-{
+std::unique_ptr<HttpResponse> EntityHandler::handle_request(const HttpRequest& request) {
     if (!fs_) {
         BOOST_LOG_TRIVIAL(debug) << "Initializing RealFilesystem for base_dir: " << base_dir_;
         fs_ = std::make_unique<RealFilesystem>(base_dir_);
     }
 
-    BOOST_LOG_TRIVIAL(info) << "Handling request: method=" << request.method << ", path=" << request.path;
+    BOOST_LOG_TRIVIAL(info) << "Handling request: method=" << request.method
+                            << ", path=" << request.path;
     HttpResponse response;
 
     try {
@@ -48,7 +48,7 @@ std::unique_ptr<HttpResponse> EntityHandler::handle_request(const HttpRequest& r
         std::string entity, id;
 
         // Extract entity from path_prefix_ (e.g. "/api/entity" => "entity")
-        size_t first = path.find('/', 0); // skip initial '/'
+        size_t first = path.find('/', 0);  // skip initial '/'
         size_t second = path.find('/', first + 1);
         size_t third = path.find('/', second + 1);
         if (second != std::string::npos && third != std::string::npos) {
@@ -141,7 +141,6 @@ std::unique_ptr<HttpResponse> EntityHandler::handle_request(const HttpRequest& r
 
     return std::make_unique<HttpResponse>(response);
 }
-
 
 /*
 This program is ran at startup, before main()

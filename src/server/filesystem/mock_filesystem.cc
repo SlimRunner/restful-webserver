@@ -1,9 +1,8 @@
 #include "mock_filesystem.h"
 
 #include <algorithm>
-#include <stdexcept>
-
 #include <boost/log/trivial.hpp>
+#include <stdexcept>
 
 #include "not_found_exception.h"
 
@@ -16,14 +15,16 @@ bool MockFilesystem::exists(const std::string& entity, const std::string& id) {
 
 std::string MockFilesystem::read(const std::string& entity, const std::string& id) {
     if (!exists(entity, id)) {
-        BOOST_LOG_TRIVIAL(warning) << "MockFilesystem: No such entity or ID: " << entity << "/" << id;
+        BOOST_LOG_TRIVIAL(warning)
+            << "MockFilesystem: No such entity or ID: " << entity << "/" << id;
 
         throw NotFoundException("MockFilesystem: No such entity or ID: " + entity + "/" + id);
     }
     return data_[entity][id];
 }
 
-void MockFilesystem::write(const std::string& entity, const std::string& id, const std::string& data) {
+void MockFilesystem::write(const std::string& entity, const std::string& id,
+                           const std::string& data) {
     check_id(id);
 
     BOOST_LOG_TRIVIAL(debug) << "MockFilesystem: Writing to " << entity << "/" << id;
@@ -33,7 +34,8 @@ void MockFilesystem::write(const std::string& entity, const std::string& id, con
 
 void MockFilesystem::remove(const std::string& entity, const std::string& id) {
     if (!exists(entity, id)) {
-        BOOST_LOG_TRIVIAL(warning) << "MockFilesystem: Could not remove file: " << entity << "/" << id;
+        BOOST_LOG_TRIVIAL(warning)
+            << "MockFilesystem: Could not remove file: " << entity << "/" << id;
 
         throw NotFoundException("MockFilesystem: Could not remove file: " + entity + "/" + id);
     }

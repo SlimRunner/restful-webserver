@@ -1,12 +1,11 @@
 #include "mock_filesystem.h"
 
 #include "gtest/gtest.h"
-
-#include "not_found_exception.h"
 #include "invalid_id_exception.h"
+#include "not_found_exception.h"
 
 class MockFilesystemTest : public testing::Test {
-protected:
+   protected:
     MockFilesystem fs;
 
     void SetUp() override {

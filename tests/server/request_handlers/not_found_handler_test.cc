@@ -24,7 +24,8 @@ TEST(NotFoundHandlerTest, AlwaysReturns404) {
         EXPECT_EQ(resp->status, StatusCode::NOT_FOUND);
         EXPECT_EQ(resp->body, "404 Not Found");
         EXPECT_EQ(resp->headers.at("Content-Type"), "text/plain");
-        EXPECT_EQ(resp->headers.at("Content-Length"), std::to_string(std::string("404 Not Found").size()));
+        EXPECT_EQ(resp->headers.at("Content-Length"),
+                  std::to_string(std::string("404 Not Found").size()));
     }
 }
 
@@ -76,10 +77,10 @@ TEST(NotFoundHandlerTest, HandlesEmptyHeadersAndBody) {
 TEST(NotFoundHandlerTest, HandlesEmptyMethodAndPath) {
     NotFoundHandler nfHandler("/", {});
     HttpRequest req;
-    req.method = "";     // missing method
-    req.path = "";       // missing path
+    req.method = "";  // missing method
+    req.path = "";    // missing path
     req.version = "HTTP/1.1";
-    req.headers = {{"Host","localhost"}};
+    req.headers = {{"Host", "localhost"}};
     req.body = "ignored";
 
     auto resp = nfHandler.handle_request(req);

@@ -11,7 +11,8 @@ void Filesystem::check_id(const std::string& id) {
         int numeric_id = std::stoi(id);
 
         if (numeric_id <= 0) {
-            BOOST_LOG_TRIVIAL(warning) << "Invalid id (" << id << "): ID must be a positive integer";
+            BOOST_LOG_TRIVIAL(warning)
+                << "Invalid id (" << id << "): ID must be a positive integer";
 
             throw InvalidIdException("Invalid id (" + id + "): ID must be a positive integer");
         }
@@ -20,6 +21,6 @@ void Filesystem::check_id(const std::string& id) {
 
         throw InvalidIdException("Invalid id (" + id + "): ID must be a positive integer");
     }
-    
+
     BOOST_LOG_TRIVIAL(debug) << "Id is valid: " << id;
 }

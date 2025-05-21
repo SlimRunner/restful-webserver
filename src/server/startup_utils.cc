@@ -43,7 +43,6 @@ std::optional<config_payload> parse_config(std::string filepath) {
     (void)force_link_not_found_handler;
     (void)force_link_entity_handler;
 
-
     NginxConfigParser config_parser;
     NginxConfig config;
 

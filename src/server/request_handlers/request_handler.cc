@@ -3,7 +3,6 @@
 #include <boost/log/trivial.hpp>
 #include <sstream>
 
-
 /*
 Serializes the HttpResponse object into a raw HTTP response string.
 

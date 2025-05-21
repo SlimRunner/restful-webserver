@@ -1,20 +1,18 @@
 #include "real_filesystem.h"
 
 #include <algorithm>
+#include <boost/log/trivial.hpp>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
-
-#include <boost/log/trivial.hpp>
 
 #include "file_io_exception.h"
 #include "not_found_exception.h"
 
 namespace fs = std::filesystem;
 
-RealFilesystem::RealFilesystem(const std::string& data_path)
-    : data_path_(data_path) {
+RealFilesystem::RealFilesystem(const std::string& data_path) : data_path_(data_path) {
     fs::create_directories(data_path);
 }
 
@@ -49,7 +47,8 @@ std::string RealFilesystem::read(const std::string& entity, const std::string& i
     return ss.str();
 }
 
-void RealFilesystem::write(const std::string& entity, const std::string& id, const std::string& data) {
+void RealFilesystem::write(const std::string& entity, const std::string& id,
+                           const std::string& data) {
     check_id(id);
 
     std::string dir = make_path(entity);

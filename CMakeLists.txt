@@ -175,7 +175,7 @@ set(SERVER_TEST_SOURCES
   tests/server/request_handlers/entity_handler_test.cc
   tests/server/tagged_exceptions_test.cc
   tests/server/startup_utils_test.cc
-  tests/server/filesystem/filesystem_test.cc
+  tests/server/filesystem/mock_filesystem_test.cc
   # Add more test libraries here
 )
 

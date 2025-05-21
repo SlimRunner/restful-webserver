@@ -122,10 +122,9 @@ void session::handle_read(const boost::system::error_code &error, size_t bytes_t
     request_buffer_ += std::string(data_, bytes_transferred);
 
     while (true) {
-
         size_t header_end = request_buffer_.find("\r\n\r\n");
         if (header_end == std::string::npos) {
-            break; // wait for full headers
+            break;  // wait for full headers
         }
 
         // Extract headers
@@ -138,8 +137,7 @@ void session::handle_read(const boost::system::error_code &error, size_t bytes_t
         while (std::getline(temp_stream, line) && line != "\r") {
             if (line.find("Content-Length:") == 0) {
                 std::string value = line.substr(strlen("Content-Length:"));
-                while (!value.empty() && (value[0] == ' ' || value[0] == '\t'))
-                    value.erase(0, 1);
+                while (!value.empty() && (value[0] == ' ' || value[0] == '\t')) value.erase(0, 1);
                 content_length = std::stoul(value);
                 if (content_length > max_content_length_) {
                     BOOST_LOG_TRIVIAL(warning) << "Content-Length too large: " << content_length;
@@ -153,7 +151,7 @@ void session::handle_read(const boost::system::error_code &error, size_t bytes_t
 
                     current_response_ = response.ToString();
                     boost::asio::async_write(socket_, boost::asio::buffer(current_response_),
-                                            boost::bind(&session::handle_write, this, _1));
+                                             boost::bind(&session::handle_write, this, _1));
                     return;
                 }
             }
@@ -162,7 +160,7 @@ void session::handle_read(const boost::system::error_code &error, size_t bytes_t
         // Wait for body to arrive
         size_t total_request_size = header_end + 4 + content_length;
         if (request_buffer_.size() < total_request_size) {
-            break; // wait for full body
+            break;  // wait for full body
         }
 
         // Extract full request (headers + body)

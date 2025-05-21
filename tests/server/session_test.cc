@@ -1,10 +1,10 @@
 #include "session.h"
 
 #include "echo_handler.h"
+#include "entity_handler.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "static_file_handler.h"
-#include "entity_handler.h"
 
 extern volatile int force_link_echo_handler;
 extern volatile int force_link_static_handler;
