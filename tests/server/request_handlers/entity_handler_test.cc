@@ -1,13 +1,14 @@
 #include "entity_handler.h"
-#include "mock_filesystem.h"
-#include "gtest/gtest.h"
+
 #include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include "handler_registry.h"
+#include "mock_filesystem.h"
 
 using ::testing::Return;
 
 class EntityHandlerTest : public ::testing::Test {
-protected:
+   protected:
     std::unique_ptr<MockFilesystem> mock_fs;
     std::unique_ptr<EntityHandler> handler;
     MockFilesystem* mock_fs_ptr;
@@ -24,7 +25,9 @@ protected:
         handler->set_filesystem(std::move(mock));
     }
 
-    MockFilesystem* fs() { return mock_fs_ptr; }
+    MockFilesystem* fs() {
+        return mock_fs_ptr;
+    }
 };
 
 TEST_F(EntityHandlerTest, GetWithValidIdReturnsData) {
@@ -137,4 +140,36 @@ TEST_F(EntityHandlerTest, UnsupportedMethodReturnsBadRequest) {
     auto response = handler->handle_request(request);
     EXPECT_EQ(response->status, StatusCode::BAD_REQUEST);
     EXPECT_EQ(response->body, "Unsupported HTTP method.");
+}
+
+TEST_F(EntityHandlerTest, ThrowsWhenRootArgumentMissing) {
+    std::map<std::string, std::string> empty_args;
+    EXPECT_THROW({ EntityHandler handler("/api/entity", empty_args); }, std::runtime_error);
+}
+
+TEST_F(EntityHandlerTest, GetFilesystemReturnsSetFilesystem) {
+    EXPECT_EQ(handler->get_filesystem(), mock_fs_ptr);
+}
+
+TEST_F(EntityHandlerTest, PutWithEmptyBody) {
+    fs()->write("entity", "1", "old value");
+
+    HttpRequest request;
+    request.method = "PUT";
+    request.path = "/api/entity/1";
+    request.body = "";
+
+    auto response = handler->handle_request(request);
+    EXPECT_EQ(response->status, StatusCode::OK);
+    EXPECT_EQ(fs()->read("entity", "1"), "");
+}
+
+TEST_F(EntityHandlerTest, PostWithEmptyBody) {
+    HttpRequest request;
+    request.method = "POST";
+    request.path = "/api/entity";
+    request.body = "";
+
+    auto response = handler->handle_request(request);
+    EXPECT_EQ(response->status, StatusCode::OK);
 }
