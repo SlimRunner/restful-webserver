@@ -4,6 +4,7 @@
   - [Committing Style Guide](#committing-style-guide)
     - [Write Awesome Commit Messages](#write-awesome-commit-messages)
     - [How to Save in nano](#how-to-save-in-nano)
+  - [Miscelaneus Commands](#miscelaneus-commands)
 
 # Quick Commit Guide
 
@@ -72,3 +73,30 @@ This will open nano. Now you can copy your message in VS Code and right-click in
 
 ### How to Save in nano
 Make some changes > `ctrl + x` > `y` > `enter`.
+
+## Miscelaneus Commands
+This is a list of various commands that you may be useful.
+
+---
+Mirror a folder structure to set up testing
+```sh
+rsync -a -f"+ */" -f"- *" src/ tests/
+```
+
+---
+Print report of commit count by user
+```sh
+git shortlog -s -n
+```
+
+---
+Print report of commit count by email
+```sh
+git log --format='%ae' | sort | uniq -c | sort -nr
+```
+
+---
+Line count report of files inside `path`
+```sh
+find <path> -type f -print0 | wc -l --files0-from=-
+```
