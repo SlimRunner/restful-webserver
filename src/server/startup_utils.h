@@ -1,11 +1,10 @@
 #ifndef STARTUP_UTILS_H
 #define STARTUP_UTILS_H
 
-#include <memory>
+#include <boost/asio.hpp>
+#include <memory>  // shared_ptr
 #include <optional>
 #include <string>
-#include <utility>
-#include <vector>
 
 #include "config_parser.h"
 #include "handler_registry.h"
@@ -21,5 +20,7 @@ struct config_payload {
 std::optional<std::string> parse_arguments(int, const char* const[]);
 
 std::optional<config_payload> parse_config(std::string filepath);
+
+void init_threads(boost::asio::io_service& io_service, int num_threads);
 
 #endif

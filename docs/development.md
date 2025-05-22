@@ -118,7 +118,7 @@ Another thing to note is that when you run this, the server will take over your 
 ```sh
 docker stop my_run
 ```
-It takes about 10 seconds to shut it down.
+It should close immediately.
 
 ## Setup Local Development
 

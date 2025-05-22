@@ -1,7 +1,11 @@
 #include "startup_utils.h"
 
 #include <boost/log/trivial.hpp>
+#include <future>
 #include <set>
+#include <thread>
+#include <utility>
+#include <vector>
 
 #include "handler_registry.h"
 #include "logger.h"
@@ -12,12 +16,6 @@ using nginx_shared_statement = std::shared_ptr<NginxConfigStatement>;
 using leaf_config_map = std::map<std::string, std::vector<std::vector<std::string>>>;
 using nested_config_map = std::map<std::string, std::vector<nginx_shared_statement>>;
 using nginx_config_map = std::map<std::string, std::vector<nginx_shared_statement>>;
-
-// This forces the link, to add more handlers forcing a link here is necessary
-extern volatile int force_link_echo_handler;
-extern volatile int force_link_static_handler;
-extern volatile int force_link_not_found_handler;
-extern volatile int force_link_entity_handler;
 
 static nginx_config_map unroll_one_level(const std::vector<nginx_shared_statement> &);
 static bool string_is_quoted(std::string);
@@ -36,12 +34,6 @@ std::optional<std::string> parse_arguments(int argc, const char *const argv[]) {
 std::optional<config_payload> parse_config(std::string filepath) {
     constexpr auto PORT_KEY = "port";
     constexpr auto LOCATION_KEY = "location";
-
-    // These lines force the linking between the parser and the handlers mainly for testing
-    (void)force_link_echo_handler;
-    (void)force_link_static_handler;
-    (void)force_link_not_found_handler;
-    (void)force_link_entity_handler;
 
     NginxConfigParser config_parser;
     NginxConfig config;
@@ -139,6 +131,66 @@ std::optional<config_payload> parse_config(std::string filepath) {
     }
 
     return payload;
+}
+
+void init_threads(boost::asio::io_service &io_service, int num_threads) {
+    boost::asio::signal_set signals(io_service, SIGINT, SIGTERM);
+
+    // When signal received, stop the io_service
+    signals.async_wait([&](const boost::system::error_code &error, int signal_number) {
+        if (!error) {
+            BOOST_LOG_TRIVIAL(info)
+                << "Received signal " << signal_number << ". Initiating graceful shutdown...";
+            // Post to the io_service to stop safely
+            io_service.stop();
+        }
+    });
+
+    std::vector<std::thread> thread_pool;
+    std::vector<std::future<void>> except_futures;
+    except_futures.reserve(num_threads);
+
+    BOOST_LOG_TRIVIAL(info) << "Starting " << num_threads << " worker threads...";
+
+    for (int i = 0; i < num_threads; ++i) {
+        // promise is local but its data is moved to the worker thread
+        // so it does not die after this loop
+        std::promise<void> p;
+        except_futures.push_back(p.get_future());
+
+        thread_pool.emplace_back(
+            [&io_service, i](std::promise<void> promise) {
+                try {
+                    BOOST_LOG_TRIVIAL(debug) << "Thread " << i << " started";
+                    io_service.run();
+                    BOOST_LOG_TRIVIAL(debug) << "Thread " << i << " exited cleanly";
+                    promise.set_value();  // Fulfill the promise on success
+
+                } catch (const std::exception &e) {
+                    BOOST_LOG_TRIVIAL(error) << "Exception in thread " << i << ": " << e.what();
+
+                    // this allows main to know about a thread error
+                    promise.set_exception(std::current_exception());
+                }
+            },
+            std::move(p));
+    }
+
+    for (auto &t : thread_pool) {
+        // this blocks until thread t is done. We do not need any
+        // specific order of completion so this is fine.
+        t.join();
+    }
+
+    // Check for exceptions
+    for (int i = 0; i < num_threads; ++i) {
+        // re-throw exception from thread. This only throws the first
+        // one encountered, but the rest are logged prior. It is main's
+        // job to catch this.
+        except_futures[i].get();
+    }
+
+    BOOST_LOG_TRIVIAL(info) << "All worker threads have exited. Server shutdown complete.";
 }
 
 /// @brief unfolds one level of an Nginx statement such that the result

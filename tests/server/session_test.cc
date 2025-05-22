@@ -8,7 +8,9 @@
 
 extern volatile int force_link_echo_handler;
 extern volatile int force_link_static_handler;
+extern volatile int force_link_not_found_handler;
 extern volatile int force_link_entity_handler;
+extern volatile int force_link_sleep_handler;
 
 // Made a testableSession class to test the private stuff in session class
 class TestableSession : public session {
@@ -100,7 +102,9 @@ class SessionTest : public ::testing::Test {
     void SetUp() override {
         (void)force_link_echo_handler;
         (void)force_link_static_handler;
+        (void)force_link_not_found_handler;
         (void)force_link_entity_handler;
+        (void)force_link_sleep_handler;
 
         RoutingMap routes_;
 
@@ -127,7 +131,9 @@ class SessionTestReal : public ::testing::Test {
     void SetUp() override {
         (void)force_link_echo_handler;
         (void)force_link_static_handler;
+        (void)force_link_not_found_handler;
         (void)force_link_entity_handler;
+        (void)force_link_sleep_handler;
 
         IHandlerRegistry *registry = &HandlerRegistry::instance();
         RoutingMap routes_;

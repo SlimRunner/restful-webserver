@@ -26,12 +26,17 @@
 using namespace boost::placeholders;
 extern volatile int force_link_echo_handler;
 extern volatile int force_link_static_handler;
+extern volatile int force_link_not_found_handler;
 extern volatile int force_link_entity_handler;
+extern volatile int force_link_sleep_handler;
 
 int main(int argc, char *argv[]) {
     (void)force_link_echo_handler;
     (void)force_link_static_handler;
+    (void)force_link_not_found_handler;
     (void)force_link_entity_handler;
+    (void)force_link_sleep_handler;
+
     try {
         init_logging();
         IHandlerRegistry *registry = &HandlerRegistry::instance();
@@ -63,13 +68,20 @@ int main(int argc, char *argv[]) {
         BOOST_LOG_TRIVIAL(info) << "Config loaded successfully.";
 
         boost::asio::io_service io_service;
+        boost::asio::io_service::work work_guard(io_service);
 
         // Create the server with the configured handlers
         server s(io_service, config.port_number, config.route_map, [&](auto &io, auto routes) {
             return new session(io, std::move(routes), registry);
         });
-        BOOST_LOG_TRIVIAL(info) << "Server started successfully on port " << config.port_number;
-        io_service.run();
+
+        const int num_threads =
+            std::thread::hardware_concurrency() > 0 ? std::thread::hardware_concurrency() : 4;
+
+        BOOST_LOG_TRIVIAL(info) << "Server started successfully on port " << config.port_number
+                                << " with " << num_threads << " worker threads";
+
+        init_threads(io_service, num_threads);
 
     } catch (expt::registry_exception &e) {
         BOOST_LOG_TRIVIAL(error) << "Registry failure: " << e.what();

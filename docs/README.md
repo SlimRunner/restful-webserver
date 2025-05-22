@@ -97,7 +97,7 @@ REGISTER_HANDLER_WITH_NAME(YourHandler, "YourHandler")
 
 ## 3. Force Link in Startup
 
-In `src/server/startup_utils.cc`, declare and reference your `force_link_*` symbol so the build and tests link your handler:
+In `src/server/main_server.cc`, declare and reference your `force_link_*` symbol so the build and tests link your handler:
 
 ```diff
  extern volatile int force_link_echo_handler;
@@ -112,7 +112,7 @@ In `src/server/startup_utils.cc`, declare and reference your `force_link_*` symb
  }
 ```
 
-> **Example:** We added `force_link_not_found_handler` and invoked it in `startup_utils.cc`.
+> **Example:** We added `force_link_not_found_handler` and invoked it in `main_server.cc`.
 
 ## 4. Update Build Configuration
 

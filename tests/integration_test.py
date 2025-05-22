@@ -10,6 +10,8 @@ import socket
 from logging.handlers import RotatingFileHandler
 import json
 import uuid
+import concurrent.futures
+import shutil
 
 # use this variable as root for what is in tests/common_files
 test_data_dir = os.environ.get("TEST_DATA_DIR")
@@ -212,13 +214,27 @@ class HTTPServerTestCase(unittest.TestCase):
 
 
 class IntegrationTests(HTTPServerTestCase):
-    SERVER_CMD = ["./bin/webserver", "./server_config.txt"]
+    SERVER_CMD = ["./bin/webserver", os.path.join(test_data_dir, "seq_config.conf")]
     SERVER_CWD = "."  # optional cwd
     HOST = "localhost"  # server host (default 'localhost')
     PORT = 8081  # server port (int)
     STDERR_FILE = "integration_test_logs/server_stderr.log"
     TESTLOG_FILE = "integration_test_logs/server_test.log"
-    STARTUP_DELAY = 2  # seconds to wait after starting server
+    STARTUP_DELAY = 1  # seconds to wait after starting server
+
+    @classmethod
+    def tearDownClass(cls):
+        # Your custom cleanup
+        path = "/tmp/integration"
+        try:
+            shutil.rmtree(path)
+        except FileNotFoundError:
+            pass
+        except Exception as e:
+            cls._logger.warning(f"Failed to remove {path}: {e}")
+
+        # Call parent teardown
+        super().tearDownClass()
 
     def test_common_data_dir(self):
         self._logger.info(f"common file path: {test_data_dir}")
@@ -369,6 +385,88 @@ class IntegrationTests(HTTPServerTestCase):
         id_list = json.loads(body)
         for i in ids:
             self.assertIn(i, id_list)
+
+
+class MultithreadIntegrationTests(HTTPServerTestCase):
+    SERVER_CMD = ["./bin/webserver", os.path.join(test_data_dir, "thread_config.conf")]
+    SERVER_CWD = "."  # optional cwd
+    HOST = "localhost"  # server host (default 'localhost')
+    PORT = 8081  # server port (int)
+    STDERR_FILE = "integration_test_logs/server_stderr.log"
+    TESTLOG_FILE = "integration_test_logs/server_test.log"
+    STARTUP_DELAY = 1  # seconds to wait after starting server
+
+    @classmethod
+    def tearDownClass(cls):
+        # Your custom cleanup
+        path = "/tmp/integration"
+        try:
+            shutil.rmtree(path)
+        except FileNotFoundError:
+            pass
+        except Exception as e:
+            cls._logger.warning(f"Failed to remove {path}: {e}")
+
+        # Call parent teardown
+        super().tearDownClass()
+
+    def test_concurrent_requests(self):
+        self._logger.info(f"Start concurrent integration test")
+
+        # Function to send a request and return the response and timing info
+        def timed_request(method, path, **kwargs):
+            start_time = time.time()
+            result = self.send_request(method, path, **kwargs)
+            end_time = time.time()
+            return {
+                "response": result,
+                "start_time": start_time,
+                "end_time": end_time,
+                "duration": end_time - start_time,
+                "path": path,
+            }
+
+        start_time = time.time()
+
+        # Submit both requests concurrently
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            self._logger.debug(f"Schedule sleep request")
+            sleep_future = executor.submit(timed_request, "GET", "/sleep")
+            # Give a small delay to ensure sleep request starts first
+            time.sleep(0.01)
+            self._logger.debug(f"Schedule echo request")
+            echo_future = executor.submit(
+                timed_request, "GET", "/echo", body="concurrent test"
+            )
+
+            self._logger.debug(f"Await requests")
+            # Wait for both to complete
+            sleep_result = sleep_future.result()
+            echo_result = echo_future.result()
+
+        total_time = time.time() - start_time
+
+        # Assertions
+
+        # 1. Both requests should succeed
+        self.assertEqual(sleep_result["response"][0], 200)  # status code
+        self.assertEqual(echo_result["response"][0], 200)  # status code
+
+        # 2. Sleep request should take at least 200ms
+        self.assertGreaterEqual(sleep_result["duration"], 0.2)
+
+        # 3. Total execution time should be closer to max(sleep_time, echo_time)
+        # rather than sum(sleep_time, echo_time)
+        self.assertLess(
+            total_time,
+            0.4,  # Should be less than sequential execution time
+            f"Requests appear to be executing sequentially: {total_time:.3f}s",
+        )
+
+        # 4. Log details for debugging
+        self._logger.info(f"Sleep request took {sleep_result['duration']:.3f}s")
+        self._logger.info(f"Echo request took {echo_result['duration']:.3f}s")
+        self._logger.info(f"Total processing time: {total_time:.3f}s")
 
 
 if __name__ == "__main__":
