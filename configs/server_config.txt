@@ -12,7 +12,7 @@ location /static StaticHandler {
 
 # Entity handler for /api path
 location /api EntityHandler {
-    root /tmp/crud;
+    root /tmp/storage/crud;
 }
 
 # Not Found handler for any / path
