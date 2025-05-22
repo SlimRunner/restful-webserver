@@ -11,7 +11,7 @@ location /static StaticHandler {
 }
 
 # Entity handler for /api path
-location /api/entity EntityHandler {
+location /api EntityHandler {
     root /tmp/crud;
 }
 

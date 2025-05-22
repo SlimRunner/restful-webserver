@@ -10,7 +10,7 @@ location /static StaticHandler {
     root ./static;
 }
 
-# Entity handler for /api/entity path
+# Entity handler for /api path
 location /api EntityHandler {
     root /tmp/crud;
 }
