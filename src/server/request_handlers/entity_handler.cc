@@ -43,20 +43,21 @@ std::unique_ptr<HttpResponse> EntityHandler::handle_request(const HttpRequest& r
     try {
         std::string path = request.path;
 
-        std::string entity, id;
+        EntityPayload entity = {base_dir_, ""};
+        std::string id;
 
         // Extract entity from path_prefix_ (e.g. "/api/entity" => "entity")
         size_t first = path.find('/', 0);  // skip initial '/'
         size_t second = path.find('/', first + 1);
         size_t third = path.find('/', second + 1);
         if (second != std::string::npos && third != std::string::npos) {
-            entity = path.substr(second + 1, third - second - 1);
+            entity.name = path.substr(second + 1, third - second - 1);
             id = path.substr(third + 1);
         } else {
-            entity = path.substr(second + 1);
+            entity.name = path.substr(second + 1);
         }
 
-        BOOST_LOG_TRIVIAL(debug) << "Parsed entity: " << entity << ", id: " << id;
+        BOOST_LOG_TRIVIAL(debug) << "Parsed entity: " << entity.name << ", id: " << id;
 
         if (request.method == "POST") {
             std::string new_id = fs_->next_id(entity);
@@ -66,7 +67,8 @@ std::unique_ptr<HttpResponse> EntityHandler::handle_request(const HttpRequest& r
             response.body = "{\"id\": \"" + new_id + "\"}";
             response.headers["Content-Type"] = "application/json";
             response.headers["Content-Length"] = std::to_string(response.body.size());
-            BOOST_LOG_TRIVIAL(debug) << "Created new ID: " << new_id << " for entity: " << entity;
+            BOOST_LOG_TRIVIAL(debug)
+                << "Created new ID: " << new_id << " for entity: " << entity.name;
         } else if (request.method == "GET") {
             if (id.empty()) {
                 auto ids = fs_->list_ids(entity);
@@ -81,13 +83,14 @@ std::unique_ptr<HttpResponse> EntityHandler::handle_request(const HttpRequest& r
                 response.body = oss.str();
                 response.headers["Content-Length"] = std::to_string(response.body.size());
                 response.headers["Content-Type"] = "application/json";
-                BOOST_LOG_TRIVIAL(debug) << "Listed IDs for entity: " << entity;
+                BOOST_LOG_TRIVIAL(debug) << "Listed IDs for entity: " << entity.name;
             } else {
                 response.body = fs_->read(entity, id);
                 response.status = StatusCode::OK;
                 response.headers["Content-Length"] = std::to_string(response.body.size());
                 response.headers["Content-Type"] = "application/json";
-                BOOST_LOG_TRIVIAL(debug) << "Read data for entity: " << entity << ", id: " << id;
+                BOOST_LOG_TRIVIAL(debug)
+                    << "Read data for entity: " << entity.name << ", id: " << id;
             }
         } else if (request.method == "PUT") {
             if (id.empty()) {
@@ -98,7 +101,7 @@ std::unique_ptr<HttpResponse> EntityHandler::handle_request(const HttpRequest& r
             response.body = "{\"id\": \"" + id + "\"}";
             response.headers["Content-Type"] = "application/json";
             response.headers["Content-Length"] = std::to_string(response.body.size());
-            BOOST_LOG_TRIVIAL(debug) << "Wrote data for entity: " << entity << ", id: " << id;
+            BOOST_LOG_TRIVIAL(debug) << "Wrote data for entity: " << entity.name << ", id: " << id;
         } else if (request.method == "DELETE") {
             if (id.empty()) {
                 throw std::runtime_error("DELETE request must specify an ID.");
@@ -108,7 +111,7 @@ std::unique_ptr<HttpResponse> EntityHandler::handle_request(const HttpRequest& r
             response.headers["Content-Type"] = "application/json";
             response.headers["Content-Length"] = std::to_string(response.body.size());
             response.status = StatusCode::OK;
-            BOOST_LOG_TRIVIAL(debug) << "Removed entity: " << entity << ", id: " << id;
+            BOOST_LOG_TRIVIAL(debug) << "Removed entity: " << entity.name << ", id: " << id;
         } else {
             response.status = StatusCode::BAD_REQUEST;
             response.body = "Unsupported HTTP method.";

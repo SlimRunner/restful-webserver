@@ -11,29 +11,22 @@
 
 namespace fs = std::filesystem;
 
-RealFilesystem::RealFilesystem(const std::string& data_path) : data_path_(data_path) {
+RealFilesystem::RealFilesystem(const std::string& data_path) {
     fs::create_directories(data_path);
 }
 
-std::string RealFilesystem::make_path(const std::string& entity, const std::string& id) const {
-    if (id.empty()) {
-        return data_path_ + "/" + entity;
-    }
-    return data_path_ + "/" + entity + "/" + id;
+bool RealFilesystem::exists(EntityPayload entity, const std::string& id) {
+    return fs::exists(entity.make_path(id));
 }
 
-bool RealFilesystem::exists(const std::string& entity, const std::string& id) {
-    return fs::exists(make_path(entity, id));
-}
-
-std::string RealFilesystem::read(const std::string& entity, const std::string& id) {
+std::string RealFilesystem::read(EntityPayload entity, const std::string& id) {
     if (!exists(entity, id)) {
-        BOOST_LOG_TRIVIAL(warning) << "No such entity or ID: " << entity << "/" << id;
+        BOOST_LOG_TRIVIAL(warning) << "No such entity or ID: " << entity.make_name(id);
 
-        throw expt::not_found_exception("No such entity or ID: " + entity + "/" + id);
+        throw expt::not_found_exception("No such entity or ID: " + entity.make_name(id));
     }
 
-    std::string path = make_path(entity, id);
+    std::string path = entity.make_path(id);
     std::ifstream file(path);
     if (!file.is_open()) {
         BOOST_LOG_TRIVIAL(warning) << "Could not open file for reading: " << path;
@@ -46,14 +39,13 @@ std::string RealFilesystem::read(const std::string& entity, const std::string& i
     return ss.str();
 }
 
-void RealFilesystem::write(const std::string& entity, const std::string& id,
-                           const std::string& data) {
+void RealFilesystem::write(EntityPayload entity, const std::string& id, const std::string& data) {
     check_id(id);
 
-    std::string dir = make_path(entity);
+    std::string dir = entity.make_path();
     fs::create_directories(dir);
 
-    std::string path = make_path(entity, id);
+    std::string path = entity.make_path(id);
     std::ofstream file(path);
     if (!file.is_open()) {
         BOOST_LOG_TRIVIAL(warning) << "Could not open file for writing: " << path;
@@ -66,8 +58,8 @@ void RealFilesystem::write(const std::string& entity, const std::string& id,
     file << data;
 }
 
-void RealFilesystem::remove(const std::string& entity, const std::string& id) {
-    std::string path = make_path(entity, id);
+void RealFilesystem::remove(EntityPayload entity, const std::string& id) {
+    std::string path = entity.make_path(id);
 
     BOOST_LOG_TRIVIAL(info) << "Removing " << path;
 
@@ -78,9 +70,9 @@ void RealFilesystem::remove(const std::string& entity, const std::string& id) {
     }
 }
 
-std::vector<std::string> RealFilesystem::list_ids(const std::string& entity) {
+std::vector<std::string> RealFilesystem::list_ids(EntityPayload entity) {
     std::vector<std::string> ids;
-    std::string dir_path = make_path(entity);
+    std::string dir_path = entity.make_path();
 
     if (!fs::exists(dir_path)) {
         return ids;
@@ -94,7 +86,7 @@ std::vector<std::string> RealFilesystem::list_ids(const std::string& entity) {
     return ids;
 }
 
-std::string RealFilesystem::next_id(const std::string& entity) {
+std::string RealFilesystem::next_id(EntityPayload entity) {
     auto ids = list_ids(entity);
     int max_id = 0;
 

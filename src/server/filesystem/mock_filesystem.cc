@@ -6,58 +6,57 @@
 
 #include "tagged_exceptions.h"
 
-bool MockFilesystem::exists(const std::string& entity, const std::string& id) {
-    if (!data_.count(entity)) {
+bool MockFilesystem::exists(EntityPayload entity, const std::string& id) {
+    if (!data_.count(entity.name)) {
         return false;
     }
-    return data_[entity].count(id);
+    return data_[entity.name].count(id);
 }
 
-std::string MockFilesystem::read(const std::string& entity, const std::string& id) {
+std::string MockFilesystem::read(EntityPayload entity, const std::string& id) {
     if (!exists(entity, id)) {
         BOOST_LOG_TRIVIAL(warning)
-            << "MockFilesystem: No such entity or ID: " << entity << "/" << id;
+            << "MockFilesystem: No such entity or ID: " << entity.make_name(id);
 
-        throw expt::not_found_exception("MockFilesystem: No such entity or ID: " + entity + "/" +
-                                        id);
+        throw expt::not_found_exception("MockFilesystem: No such entity or ID: " +
+                                        entity.make_name(id));
     }
-    return data_[entity][id];
+    return data_[entity.name][id];
 }
 
-void MockFilesystem::write(const std::string& entity, const std::string& id,
-                           const std::string& data) {
+void MockFilesystem::write(EntityPayload entity, const std::string& id, const std::string& data) {
     check_id(id);
 
-    BOOST_LOG_TRIVIAL(debug) << "MockFilesystem: Writing to " << entity << "/" << id;
+    BOOST_LOG_TRIVIAL(debug) << "MockFilesystem: Writing to " << entity.make_name(id);
 
-    data_[entity][id] = data;
+    data_[entity.name][id] = data;
 }
 
-void MockFilesystem::remove(const std::string& entity, const std::string& id) {
+void MockFilesystem::remove(EntityPayload entity, const std::string& id) {
     if (!exists(entity, id)) {
         BOOST_LOG_TRIVIAL(warning)
-            << "MockFilesystem: Could not remove file: " << entity << "/" << id;
+            << "MockFilesystem: Could not remove file: " << entity.make_name(id);
 
-        throw expt::not_found_exception("MockFilesystem: Could not remove file: " + entity + "/" +
-                                        id);
+        throw expt::not_found_exception("MockFilesystem: Could not remove file: " +
+                                        entity.make_name(id));
     }
 
-    BOOST_LOG_TRIVIAL(debug) << "MockFilesystem: Removing " << entity << "/" << id;
+    BOOST_LOG_TRIVIAL(debug) << "MockFilesystem: Removing " << entity.make_name(id);
 
-    data_[entity].erase(id);
+    data_[entity.name].erase(id);
 }
 
-std::vector<std::string> MockFilesystem::list_ids(const std::string& entity) {
+std::vector<std::string> MockFilesystem::list_ids(EntityPayload entity) {
     std::vector<std::string> ids;
-    if (data_.count(entity)) {
-        for (const auto& [id, _] : data_[entity]) {
+    if (data_.count(entity.name)) {
+        for (const auto& [id, _] : data_[entity.name]) {
             ids.push_back(id);
         }
     }
     return ids;
 }
 
-std::string MockFilesystem::next_id(const std::string& entity) {
+std::string MockFilesystem::next_id(EntityPayload entity) {
     auto ids = list_ids(entity);
     int max_id = 0;
 

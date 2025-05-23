@@ -12,10 +12,11 @@ class EntityHandlerTest : public ::testing::Test {
     std::unique_ptr<MockFilesystem> mock_fs;
     std::unique_ptr<EntityHandler> handler;
     MockFilesystem* mock_fs_ptr;
+    std::string h_path = "/tmp/mock_fs";
 
     void SetUp() override {
         std::map<std::string, std::string> args = {
-            {"root", "/tmp/mock_fs"}  // writable safe path
+            {"root", h_path}  // writable safe path
         };
 
         handler = std::make_unique<EntityHandler>("/api/entity", args);
@@ -35,7 +36,7 @@ TEST_F(EntityHandlerTest, GetWithValidIdReturnsData) {
     request.method = "GET";
     request.path = "/api/entity/1";
 
-    fs()->write("entity", "1", "{\"name\":\"Whiskers\"}");
+    fs()->write({h_path, "entity"}, "1", "{\"name\":\"Whiskers\"}");
 
     auto response = handler->handle_request(request);
     EXPECT_EQ(response->status, StatusCode::OK);
@@ -44,8 +45,8 @@ TEST_F(EntityHandlerTest, GetWithValidIdReturnsData) {
 }
 
 TEST_F(EntityHandlerTest, GetWithoutIdReturnsList) {
-    fs()->write("entity", "1", "alpha");
-    fs()->write("entity", "2", "beta");
+    fs()->write({h_path, "entity"}, "1", "alpha");
+    fs()->write({h_path, "entity"}, "2", "beta");
 
     HttpRequest request;
     request.method = "GET";
@@ -70,7 +71,7 @@ TEST_F(EntityHandlerTest, PostCreatesNewEntity) {
 }
 
 TEST_F(EntityHandlerTest, PutWithIdUpdatesEntity) {
-    fs()->write("entity", "1", "old value");
+    fs()->write({h_path, "entity"}, "1", "old value");
 
     HttpRequest request;
     request.method = "PUT";
@@ -79,11 +80,11 @@ TEST_F(EntityHandlerTest, PutWithIdUpdatesEntity) {
 
     auto response = handler->handle_request(request);
     EXPECT_EQ(response->status, StatusCode::OK);
-    EXPECT_EQ(fs()->read("entity", "1"), "updated data");
+    EXPECT_EQ(fs()->read({h_path, "entity"}, "1"), "updated data");
 }
 
 TEST_F(EntityHandlerTest, DeleteWithValidIdRemovesEntity) {
-    fs()->write("entity", "1", "to delete");
+    fs()->write({h_path, "entity"}, "1", "to delete");
 
     HttpRequest request;
     request.method = "DELETE";
@@ -91,7 +92,7 @@ TEST_F(EntityHandlerTest, DeleteWithValidIdRemovesEntity) {
 
     auto response = handler->handle_request(request);
     EXPECT_EQ(response->status, StatusCode::OK);
-    EXPECT_FALSE(fs()->exists("entity", "1"));
+    EXPECT_FALSE(fs()->exists({h_path, "entity"}, "1"));
 }
 
 TEST_F(EntityHandlerTest, GetWithInvalidIdReturnsNotFound) {
@@ -152,7 +153,7 @@ TEST_F(EntityHandlerTest, GetFilesystemReturnsSetFilesystem) {
 }
 
 TEST_F(EntityHandlerTest, PutWithEmptyBody) {
-    fs()->write("entity", "1", "old value");
+    fs()->write({h_path, "entity"}, "1", "old value");
 
     HttpRequest request;
     request.method = "PUT";
@@ -161,7 +162,7 @@ TEST_F(EntityHandlerTest, PutWithEmptyBody) {
 
     auto response = handler->handle_request(request);
     EXPECT_EQ(response->status, StatusCode::OK);
-    EXPECT_EQ(fs()->read("entity", "1"), "");
+    EXPECT_EQ(fs()->read({h_path, "entity"}, "1"), "");
 }
 
 TEST_F(EntityHandlerTest, PostWithEmptyBody) {

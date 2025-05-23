@@ -1,8 +1,24 @@
 #include "filesystem_interface.h"
 
+#include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
 
 #include "tagged_exceptions.h"
+
+std::string EntityPayload::make_path() {
+    boost::filesystem::path filepath = path;
+    return (filepath / name).string();
+}
+
+std::string EntityPayload::make_path(const std::string& id) {
+    boost::filesystem::path filepath = path;
+    return (filepath / name / id).string();
+}
+
+std::string EntityPayload::make_name(const std::string& id) {
+    boost::filesystem::path filepath = name;
+    return (filepath / id).string();
+}
 
 void Filesystem::check_id(const std::string& id) {
     try {
