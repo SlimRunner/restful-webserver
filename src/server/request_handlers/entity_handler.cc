@@ -8,17 +8,26 @@
 
 volatile int force_link_entity_handler = 0;
 
+MutexPool<std::string> EntityHandler::mutex_map_;
+
 EntityHandler::EntityHandler(const std::string& path_prefix,
                              const std::map<std::string, std::string>& args)
-    : path_prefix_(path_prefix) {
+    : path_prefix_(path_prefix), base_dir_("") {
     auto it = args.find("root");
     if (it == args.end()) {
         throw std::runtime_error("EntityHandler requires a 'root' argument.");
     }
 
     base_dir_ = it->second;
+    mutex_map_.insert(base_dir_);
     BOOST_LOG_TRIVIAL(debug) << "EntityHandler constructed with path_prefix: " << path_prefix_
                              << ", base_dir: " << base_dir_;
+}
+
+EntityHandler::~EntityHandler() {
+    if (base_dir_ != "") {
+        mutex_map_.erase(base_dir_);
+    }
 }
 
 void EntityHandler::set_filesystem(std::unique_ptr<Filesystem> fs) {
@@ -35,11 +44,13 @@ std::unique_ptr<HttpResponse> EntityHandler::handle_request(const HttpRequest& r
         BOOST_LOG_TRIVIAL(debug) << "Initializing RealFilesystem for base_dir: " << base_dir_;
         fs_ = std::make_unique<RealFilesystem>(base_dir_);
     }
+    const auto file_mutex_ = mutex_map_.request(base_dir_);
 
     BOOST_LOG_TRIVIAL(info) << "Handling request: method=" << request.method
                             << ", path=" << request.path;
     HttpResponse response;
 
+    std::lock_guard<std::mutex> lock_crud(*file_mutex_);
     try {
         std::string path = request.path;
 

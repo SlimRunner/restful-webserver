@@ -20,7 +20,7 @@ bool RealFilesystem::exists(EntityPayload entity, const std::string& id) {
 }
 
 std::string RealFilesystem::read(EntityPayload entity, const std::string& id) {
-    if (!exists(entity, id)) {
+    if (!fs::exists(entity.make_path(id))) {
         BOOST_LOG_TRIVIAL(warning) << "No such entity or ID: " << entity.make_name(id);
 
         throw expt::not_found_exception("No such entity or ID: " + entity.make_name(id));
@@ -46,6 +46,7 @@ void RealFilesystem::write(EntityPayload entity, const std::string& id, const st
     fs::create_directories(dir);
 
     std::string path = entity.make_path(id);
+
     std::ofstream file(path);
     if (!file.is_open()) {
         BOOST_LOG_TRIVIAL(warning) << "Could not open file for writing: " << path;
@@ -90,9 +91,17 @@ std::string RealFilesystem::next_id(EntityPayload entity) {
     auto ids = list_ids(entity);
     int max_id = 0;
 
-    if (!ids.empty()) {
-        auto max_element_it = std::max_element(ids.begin(), ids.end());
-        max_id = std::stoi(*max_element_it);
+    for (const auto& id_str : ids) {
+        try {
+            int id = std::stoi(id_str);
+            if (id > max_id) {
+                max_id = id;
+            }
+        } catch (const std::invalid_argument&) {
+            // Non-numeric ID, ignore
+        } catch (const std::out_of_range&) {
+            // Too big to be an int, ignore
+        }
     }
 
     return std::to_string(max_id + 1);

@@ -72,3 +72,12 @@ TEST_F(MockFilesystemTest, NextIdReturnsIncrementedMaxId) {
     std::string next = fs.next_id({"", "Cars"});
     EXPECT_EQ(next, "7");
 }
+
+TEST_F(MockFilesystemTest, NextIdUsesNumericSorting) {
+    fs.write({"", "Cars"}, "10", "{}");
+    fs.write({"", "Cars"}, "1", "{}");
+    fs.write({"", "Cars"}, "9", "{}");
+
+    std::string next = fs.next_id({"", "Cars"});
+    EXPECT_EQ(next, "11");
+}

@@ -60,9 +60,17 @@ std::string MockFilesystem::next_id(EntityPayload entity) {
     auto ids = list_ids(entity);
     int max_id = 0;
 
-    if (!ids.empty()) {
-        auto max_element_it = std::max_element(ids.begin(), ids.end());
-        max_id = std::stoi(*max_element_it);
+    for (const auto& id_str : ids) {
+        try {
+            int id = std::stoi(id_str);
+            if (id > max_id) {
+                max_id = id;
+            }
+        } catch (const std::invalid_argument&) {
+            // Non-numeric ID, ignore
+        } catch (const std::out_of_range&) {
+            // Too big to be an int, ignore
+        }
     }
 
     return std::to_string(max_id + 1);

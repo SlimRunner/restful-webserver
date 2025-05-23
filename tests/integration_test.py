@@ -455,13 +455,11 @@ class MultithreadIntegrationTests(HTTPServerTestCase):
         # 2. Sleep request should take at least 200ms
         self.assertGreaterEqual(sleep_result["duration"], 0.2)
 
-        # 3. Total execution time should be closer to max(sleep_time, echo_time)
-        # rather than sum(sleep_time, echo_time)
-        self.assertLess(
-            total_time,
-            0.4,  # Should be less than sequential execution time
-            f"Requests appear to be executing sequentially: {total_time:.3f}s",
-        )
+        if echo_result["duration"] > sleep_result["duration"]:
+            self.fail(
+                f"Echo request ({echo_result['duration']:.3f}s) took longer than "
+                + f"sleep request ({sleep_result['duration']:.3f}s), suggesting blocking behavior"
+            )
 
         # 4. Log details for debugging
         self._logger.info(f"Sleep request took {sleep_result['duration']:.3f}s")

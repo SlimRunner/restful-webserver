@@ -98,6 +98,11 @@ int main(int argc, char *argv[]) {
         BOOST_LOG_TRIVIAL(error) << "Server failed to start.";
         return 1;
 
+    } catch (expt::mutex_missing_exception &e) {
+        BOOST_LOG_TRIVIAL(error) << "mutex invariant violated: " << e.what();
+        BOOST_LOG_TRIVIAL(error) << "Thread sychronization was corrupted.";
+        return 1;
+
     } catch (std::exception &e) {
         BOOST_LOG_TRIVIAL(error) << "Exception during server runtime: " << e.what();
         BOOST_LOG_TRIVIAL(error) << "Server shutting down due to exception.";

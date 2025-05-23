@@ -39,6 +39,10 @@ struct not_found_exception : public base_tagged_exception {
     using base_tagged_exception::base_tagged_exception;
 };
 
+struct mutex_missing_exception : public base_tagged_exception {
+    using base_tagged_exception::base_tagged_exception;
+};
+
 }  // namespace expt
 
 #endif
