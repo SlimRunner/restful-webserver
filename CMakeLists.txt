@@ -74,6 +74,7 @@ add_library(request_handlers
     src/server/request_handlers/not_found_handler.cc
     src/server/request_handlers/entity_handler.cc
     src/server/request_handlers/sleep_handler.cc
+    src/server/request_handlers/health_handler.cc
 )
 
 target_link_libraries(request_handlers PRIVATE filesystem)
@@ -185,6 +186,7 @@ set(SERVER_TEST_SOURCES
   tests/server/request_handlers/entity_handler_test.cc
   tests/server/request_handlers/sleep_handler_test.cc
   tests/server/request_handlers/handler_registry_test.cc
+  tests/server/request_handlers/health_handler_test.cc
   tests/server/tagged_exceptions_test.cc
   tests/server/startup_utils_test.cc
   tests/server/mutex_pool_test.cc

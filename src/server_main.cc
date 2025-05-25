@@ -29,6 +29,7 @@ extern volatile int force_link_static_handler;
 extern volatile int force_link_not_found_handler;
 extern volatile int force_link_entity_handler;
 extern volatile int force_link_sleep_handler;
+extern volatile int force_link_health_handler;
 
 int main(int argc, char *argv[]) {
     (void)force_link_echo_handler;
@@ -36,6 +37,7 @@ int main(int argc, char *argv[]) {
     (void)force_link_not_found_handler;
     (void)force_link_entity_handler;
     (void)force_link_sleep_handler;
+    (void)force_link_health_handler;
 
     try {
         init_logging();

@@ -19,3 +19,8 @@ location /api EntityHandler {
 location / NotFoundHandler {
     # no arguments
 }
+
+# Health check handler for /health path
+location /health HealthHandler {
+    # no arguments
+}
