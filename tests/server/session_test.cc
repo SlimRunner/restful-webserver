@@ -330,16 +330,27 @@ TEST_F(SessionTest, HandleBadVersionRequest) {
         "Connection: close\r\n"
         "\r\n";
     boost::system::error_code successCode{};
-    const std::string actualRes =
-        "HTTP/1.1 400 Bad Request\r\n"
-        "Content-Length: 0\r\n"
-        "Content-Type: text/plain\r\n\r\n";
 
     session_->set_request(fullReq);
     session_->handle_read(successCode, fullReq.size());
+
     EXPECT_FALSE(session_->already_deleted_);
-    EXPECT_EQ(session_->current_response_, actualRes);
+    const std::string& response = session_->current_response_;
+
+    // Check status line
+    EXPECT_NE(response.find("HTTP/1.1 400 Bad Request"), std::string::npos);
+
+    // Check body content
+    EXPECT_NE(response.find("400 Bad Request"), std::string::npos);
+
+    // Check headers
+    EXPECT_NE(response.find("Content-Type: text/plain"), std::string::npos);
+    EXPECT_NE(response.find("Connection: close"), std::string::npos);
+
+    // Ensure Content-Length is accurate
+    EXPECT_NE(response.find("Content-Length: 16"), std::string::npos);
 }
+
 
 // This tests the longest matching prefix
 // Using a mockhandler to achieve this by maching a handler take the paths
@@ -495,4 +506,73 @@ TEST_F(SessionTest, HandleLargeContentLengthHeader) {
     EXPECT_FALSE(session_->already_deleted_);
     EXPECT_NE(session_->current_response_.find("413 Payload Too Large"), std::string::npos);
     EXPECT_NE(session_->current_response_.find("Connection: close"), std::string::npos);
+}
+
+// Tests request missing HTTP version (incomplete first line)
+TEST_F(SessionTest, MissingHttpVersionReturns400) {
+    std::string request =
+        "GET /hello\r\n"
+        "Host: example.com\r\n"
+        "\r\n";
+
+    boost::system::error_code successCode{};
+    session_->set_request(request);
+    session_->handle_read(successCode, request.size());
+
+    EXPECT_FALSE(session_->already_deleted_);
+    EXPECT_NE(session_->current_response_.find("400 Bad Request"), std::string::npos);
+}
+
+// Tests request with only HTTP method and no path/version
+TEST_F(SessionTest, MissingPathAndVersionReturns400) {
+    std::string request =
+        "GET\r\n"
+        "Host: example.com\r\n"
+        "\r\n";
+
+    boost::system::error_code successCode{};
+    session_->set_request(request);
+    session_->handle_read(successCode, request.size());
+
+    EXPECT_FALSE(session_->already_deleted_);
+    EXPECT_NE(session_->current_response_.find("400 Bad Request"), std::string::npos);
+}
+
+// Tests completely invalid, non-HTTP garbage request
+TEST_F(SessionTest, GarbageRequestReturns400) {
+    std::string request = "some completely invalid junk\r\n\r\n";
+
+    boost::system::error_code successCode{};
+    session_->set_request(request);
+    session_->handle_read(successCode, request.size());
+
+    EXPECT_FALSE(session_->already_deleted_);
+    EXPECT_NE(session_->current_response_.find("400 Bad Request"), std::string::npos);
+}
+
+// Tests request with only CRLF and no request line or headers
+TEST_F(SessionTest, EmptyRequestReturns400) {
+    std::string request = "\r\n\r\n";
+
+    boost::system::error_code successCode{};
+    session_->set_request(request);
+    session_->handle_read(successCode, request.size());
+
+    EXPECT_FALSE(session_->already_deleted_);
+    EXPECT_NE(session_->current_response_.find("400 Bad Request"), std::string::npos);
+}
+
+// Tests request with malformed request line (no spaces between method/path/version)
+TEST_F(SessionTest, InvalidFirstLineReturns400) {
+    std::string request =
+        "GET/echo/HTTP/1.1\r\n"
+        "Host: localhost\r\n"
+        "\r\n";
+
+    boost::system::error_code successCode{};
+    session_->set_request(request);
+    session_->handle_read(successCode, request.size());
+
+    EXPECT_FALSE(session_->already_deleted_);
+    EXPECT_NE(session_->current_response_.find("400 Bad Request"), std::string::npos);
 }

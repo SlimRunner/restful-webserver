@@ -172,14 +172,36 @@ void session::handle_read(const boost::system::error_code &error, size_t bytes_t
         // Parse the full request
         HttpRequest request = ParseRequest(full_request);
 
+        // Validate the request (basic sanity check)
+        if (request.method.empty() || request.path.empty() || request.version.empty()) {
+            try {
+                std::string client_ip = socket_.remote_endpoint().address().to_string();
+                BOOST_LOG_TRIVIAL(warning) << "Malformed request from " << client_ip << ". Returning 400.";
+            } catch (...) {
+                BOOST_LOG_TRIVIAL(warning) << "Malformed request from unknown IP. Returning 400.";
+            }
+            HttpResponse response;
+            response.status = StatusCode::BAD_REQUEST;
+            response.body = "400 Bad Request\n";
+            response.headers["Content-Type"] = "text/plain";
+            response.headers["Content-Length"] = std::to_string(response.body.size());
+            response.headers["Connection"] = "close";
+
+            current_response_ = response.ToString();
+            boost::asio::async_write(socket_, boost::asio::buffer(current_response_),
+                                    boost::bind(&session::handle_write, this, _1));
+            return;
+        }
+
         // Check HTTP version - only accepts HTTP/1.1
         if (request.version != "HTTP/1.1") {
             BOOST_LOG_TRIVIAL(warning) << "Unsupported HTTP version: " << request.version;
             HttpResponse response;
             response.status = StatusCode::BAD_REQUEST;
-            response.body = "";
+            response.body = "400 Bad Request\n";
             response.headers["Content-Type"] = "text/plain";
             response.headers["Content-Length"] = std::to_string(response.body.size());
+            response.headers["Connection"] = "close";
             current_response_ = response.ToString();
             boost::asio::async_write(socket_, boost::asio::buffer(current_response_),
                                      boost::bind(&session::handle_write, this, _1));
