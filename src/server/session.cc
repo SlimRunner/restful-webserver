@@ -188,6 +188,18 @@ void session::handle_read(const boost::system::error_code &error, size_t bytes_t
             response.headers["Connection"] = "close";
 
             current_response_ = response.ToString();
+
+            // [ResponseMetrics] log for malformed request
+            std::string client_ip = "[unknown]";
+            try {
+                client_ip = socket_.remote_endpoint().address().to_string();
+            } catch (...) {}
+            
+            BOOST_LOG_TRIVIAL(info)
+                << "[ResponseMetrics] code=400 path=" << request.path
+                << " ip=" << client_ip
+                << " handler=BadRequest";
+
             boost::asio::async_write(socket_, boost::asio::buffer(current_response_),
                                     boost::bind(&session::handle_write, this, _1));
             return;
@@ -203,6 +215,17 @@ void session::handle_read(const boost::system::error_code &error, size_t bytes_t
             response.headers["Content-Length"] = std::to_string(response.body.size());
             response.headers["Connection"] = "close";
             current_response_ = response.ToString();
+
+            // [ResponseMetrics] log for invalid version
+            std::string client_ip = "[unknown]";
+            try {
+                client_ip = socket_.remote_endpoint().address().to_string();
+            } catch (...) {}
+            BOOST_LOG_TRIVIAL(info)
+                << "[ResponseMetrics] code=400 path=" << request.path
+                << " ip=" << client_ip
+                << " handler=BadRequest";
+
             boost::asio::async_write(socket_, boost::asio::buffer(current_response_),
                                      boost::bind(&session::handle_write, this, _1));
             return;
