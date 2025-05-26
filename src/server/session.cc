@@ -262,8 +262,27 @@ void session::handle_read(const boost::system::error_code &error, size_t bytes_t
 
         // Convert response to string and store it in the member variable
         current_response_ = response_ptr->ToString();
-        BOOST_LOG_TRIVIAL(debug) << "Sent response for " << request.path
-                                 << " with status: " << response_ptr->status;
+        std::string client_ip = "[unknown]";
+        try {
+            client_ip = socket_.remote_endpoint().address().to_string();
+        } catch (...) {}
+
+        // Safely determine the name of the matched request handler.
+        // If a best-matching route prefix was found, look it up in the routes_ map
+        // and extract the handler name. Fallback to "NotFoundHandler" if no match exists or route lookup fails.
+        std::string handler_name = "NotFoundHandler";
+        if (best_prefix) {
+            auto it = routes_.find(*best_prefix);
+            if (it != routes_.end()) {
+                handler_name = it->second.handler;
+            }
+        }
+
+        BOOST_LOG_TRIVIAL(info)
+            << "[ResponseMetrics] code=" << static_cast<int>(response_ptr->status)
+            << " path=" << request.path
+            << " ip=" << client_ip
+            << " handler=" << handler_name;
         boost::asio::async_write(socket_, boost::asio::buffer(current_response_),
                                  boost::bind(&session::handle_write, this, _1));
 
