@@ -66,6 +66,13 @@ class StaticFileHandlerText : public ::testing::Test {
         return this->_files;
     }
 
+    // create a sub-directory under <tempDir>/static
+    void makeSubDir(const std::string& name)
+    {
+        namespace fs = boost::filesystem;
+        fs::create_directories(baseDir / name);
+    }
+
     StaticFileHandler getHandler(std::string prefix) {
         return StaticFileHandler(prefix, {{"root", baseDir.string()}});
     }
@@ -183,4 +190,36 @@ TEST_F(StaticFileHandlerText, CanReadFromEmptyBaseTag) {
     std::unique_ptr<HttpResponse> response = handler.handle_request(getRequest("GET", FILEPATH));
     EXPECT_EQ(response->status, StatusCode::OK);
     EXPECT_EQ(response->body, CONTENT);
+}
+
+// requesting "/base/" (root directory) must yield 404 Not Found
+TEST_F(StaticFileHandlerText, DirectoryRootReturns404)
+{
+    const std::string PREFIX = "/base";
+    createDefaultFiles();                        // still create index.html etc.
+    auto handler = getHandler(PREFIX);
+
+    // trailing slash means “directory”
+    std::unique_ptr<HttpResponse> res =
+        handler.handle_request(getRequest("GET", PREFIX + "/"));
+
+    EXPECT_EQ(res->status, StatusCode::NOT_FOUND);
+    EXPECT_EQ(res->body,   "404 Not Found");
+}
+
+// requesting a *sub-directory* must also yield 404 Not Found
+TEST_F(StaticFileHandlerText, SubDirectoryReturns404)
+{
+    
+    const std::string PREFIX = "/base";
+    createDefaultFiles();
+
+    makeSubDir("pages");
+
+    auto handler = getHandler(PREFIX);
+    std::unique_ptr<HttpResponse> res =
+        handler.handle_request(getRequest("GET", PREFIX + "/pages/"));
+
+    EXPECT_EQ(res->status, StatusCode::NOT_FOUND);
+    EXPECT_EQ(res->body,   "404 Not Found");
 }

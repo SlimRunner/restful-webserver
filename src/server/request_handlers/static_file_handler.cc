@@ -92,8 +92,32 @@ std::unique_ptr<HttpResponse> StaticFileHandler::handle_request(const HttpReques
         return std::make_unique<HttpResponse>(response);
     }
 
-    // Get file size for logging
-    std::uintmax_t file_size = std::filesystem::file_size(file_path);
+    // Immediately reject directory requests such as "/static/" or "/static/foo/"
+    if (std::filesystem::is_directory(file_path)) {
+        BOOST_LOG_TRIVIAL(warning) << "Directory access denied: " << file_path;
+        response.status  = StatusCode::NOT_FOUND;
+        response.body    = "404 Not Found";
+        response.headers["Content-Type"]   = "text/plain";
+        response.headers["Content-Length"] = std::to_string(response.body.size());
+        return std::make_unique<HttpResponse>(response);
+    }
+
+    // Ensure the target is now a regular file
+    if (!std::filesystem::is_regular_file(file_path)) {
+        response.status = StatusCode::NOT_FOUND;
+        response.body = "404 Not Found";
+        response.headers["Content-Type"] = "text/plain";
+        response.headers["Content-Length"] = std::to_string(response.body.size());
+        return std::make_unique<HttpResponse>(response);
+    }
+
+    // Safely obtain file size for logging
+    std::uintmax_t file_size = 0;
+    try {
+        file_size = std::filesystem::file_size(file_path);
+    } catch (const std::filesystem::filesystem_error &e) {
+        BOOST_LOG_TRIVIAL(error) << "Failed to get file size: " << e.what();
+    }
     BOOST_LOG_TRIVIAL(debug) << "File size: " << file_size << " bytes";
 
     // Read the file
@@ -147,19 +171,17 @@ Verifies that the requested file path does not escape the base directory.
 Prevents directory traversal attacks (e.g. using ../ to access unauthorized files).
 */
 bool StaticFileHandler::is_path_safe(const std::string &path) const {
-    // Convert both paths to absolute, normalized paths
-    std::filesystem::path abs_base_dir = std::filesystem::absolute(base_dir_).lexically_normal();
-    std::filesystem::path abs_requested_path = std::filesystem::absolute(path).lexically_normal();
+    namespace fs = std::filesystem;
+    fs::path base = fs::canonical(base_dir_);          // resolves symlinks
+    fs::path req  = fs::weakly_canonical(path);        // avoid throw if missing
 
-    // Convert to strings for comparison
-    std::string norm_base_dir = abs_base_dir.string();
-    std::string norm_requested_path = abs_requested_path.string();
+    // base / subdir rule
+    if (req.string().compare(0, base.string().size(), base.string()) != 0)
+        return false;
 
-    /*
-    Check if the normalized requested path starts with the normalized base directory
-    This ensures the requested path is within the base directory
-    */
-    return norm_requested_path.substr(0, norm_base_dir.size()) == norm_base_dir;
+    // make sure next char is '/' (or nothing) so "/base_dir2" is rejected
+    auto extra = req.string().substr(base.string().size());
+    return extra.empty() || extra[0] == fs::path::preferred_separator;
 }
 
 /*
