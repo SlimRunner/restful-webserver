@@ -1,6 +1,6 @@
 ### Build/test container ###
 # Define builder stage
-FROM tutututu-maxverstappen:base AS builder
+FROM restful-webserver:base AS builder
 
 # Share work directory
 COPY . /usr/src/project

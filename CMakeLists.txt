@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10.0)
-project(tutututu-maxverstappen)
+project(restful-webserver)
 
 # Make sure developers do not run cmake in the main project directory, to keep
 # build artifacts from becoming clutter

@@ -1,6 +1,6 @@
 # coverage.Dockerfile
 # Define builder stage
-FROM tutututu-maxverstappen:base AS builder
+FROM restful-webserver:base AS builder
 
 # Copy project source
 COPY . /usr/src/project
