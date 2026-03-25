@@ -10,11 +10,11 @@
 ### Access Live Environment
 1. Visit [Google's cloud console](https://console.cloud.google.com/).
    - Alternatively to these 5 steps [you may setup gcloud locally](#setup-gcloud-locally).
-2. Set your project to `tutututu-maxverstappen`.
+2. Set your project to `restful-webserver`.
 3. Activate Cloud Shell (upper-right button or press `g` > `s`).
 4. Make sure you see the following prompt:
     ```sh
-    USER@cloudshell:~ (tutututu-maxverstappen)$
+    USER@cloudshell:~ (restful-webserver)$
     ```
 5. Then run the following commands:
     ```sh
@@ -44,7 +44,7 @@ Once inside, you can do several things to debug your server.
   ```
   One of the entries should list our project:
   ```
-  gcr.io/tutututu-maxverstappen/tutututu-maxverstappen:latest
+  gcr.io/restful-webserver/restful-webserver:latest
   ```
   If the command fails, run:
   ```sh
@@ -68,7 +68,7 @@ Follow instructions at [gcloud cli](https://cloud.google.com/sdk/docs/install). 
 
 Recommended: for this project is to setup the default project
 ```sh
-gcloud config set project tutututu-maxverstappen
+gcloud config set project restful-webserver
 ```
 and the compute zone to the one we are using
 ```sh

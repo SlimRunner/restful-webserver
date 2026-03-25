@@ -1,14 +1,7 @@
 - [HTTP Server](#http-server)
-  - [CS 132 - tutututu-maxverstappen](#cs-132---tutututu-maxverstappen)
   - [Project Documents](#project-documents)
 
 # HTTP Server
-## CS 132 - tutututu-maxverstappen
-Group Members
-- Escobar, Christian
-- Flores, Mario
-- Kimoliatis, Christopher
-- Martinez, Carlos
 
 This is a cloud-deployed web server used for the purpose of learning software enginering principles.
 

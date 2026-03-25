@@ -5,7 +5,6 @@
     - [Run CMake](#run-cmake)
   - [Setup Local Container for Testing](#setup-local-container-for-testing)
     - [Create Docker Container](#create-docker-container)
-      - [Clone Repo from Gerrit](#clone-repo-from-gerrit)
       - [Create Base](#create-base)
       - [Run Config File to Test and Deploy](#run-config-file-to-test-and-deploy)
       - [Run the Web Server](#run-the-web-server)
@@ -16,10 +15,12 @@
       - [Kubernetes](#kubernetes)
       - [Install GCloud](#install-gcloud)
     - [Setup SSH](#setup-ssh)
-    - [Setup Devel](#setup-devel)
+    - [Setup Devel (OUTDATED STEP)](#setup-devel-outdated-step)
   - [Recommended VS Code Extensions](#recommended-vs-code-extensions)
 
 # Development
+
+> TODO: remove or migrate the `tools/env/start.sh` away from `code.cs130.org`
 
 ## C++ Environment
 
@@ -66,29 +67,17 @@ There are many ways to set up this project locally. This will describe the recom
 
 ### Create Docker Container
 
-#### Clone Repo from Gerrit
-First, create SSH keys for your local computer just the same way you did for the GCloud console.
-```sh
-ssh-keygen -t ed25519
-```
-Now find the file `~/.ssh/id_ed25519.pub` or `C:\Users\user_name\.ssh\id_ed25519.pub` (in Windows) and copy its contents to a new SSH key entry in your Gerrit settings.
-
-Now clone using SSH to get the repo locally. You can find the commands here:
-> [https://code.cs130.org/admin/repos/tutututu-maxverstappen,general](https://code.cs130.org/admin/repos/tutututu-maxverstappen,general)
-
-This setup is just for testing so it is not essential to get the commit message hook, as you won't be pushing for review.
-
 #### Create Base
 Since our config file references itself, you must first build the base and then run the config on the latest:
 ```sh
-docker build -f ./docker/base.Dockerfile -t tutututu-maxverstappen:base .
+docker build -f ./docker/base.Dockerfile -t restful-webserver:base .
 ```
 This command may take several minutes to finish. The final image in Docker takes about 1 GB.
 
 #### Run Config File to Test and Deploy
 Run the _almost_ same command again, but with a few modifications:
 ```sh
-docker build -f ./docker/Dockerfile -t tutututu-maxverstappen:latest .
+docker build -f ./docker/Dockerfile -t restful-webserver:latest .
 ```
 
 After this, you should see two images in your Docker. One is tagged `base`, and the other one is tagged `latest`.
@@ -107,7 +96,7 @@ docker images
 #### Run the Web Server
 The moment of truth. Run this command:
 ```sh
-docker run --rm -p 8080:8081 --name my_run tutututu-maxverstappen:latest
+docker run --rm -p 8080:8081 --name my_run restful-webserver:latest
 ```
 
 Notice the map from 8080 to 8081. This may be changed in the future, but our server is currently configured to run on 8081.
@@ -211,7 +200,7 @@ You can check if it worked with:
 sudo systemctl status ssh
 ```
 
-### Setup Devel
+### Setup Devel (OUTDATED STEP)
 Open the terminal:
 ```sh
 cd ~
@@ -228,14 +217,14 @@ Now do the following:
 2. Go to [code.cs130.org](https://code.cs130.org/).
    1. You should be signed in because of the earlier step in GCloud.
 3. Go to settings > keygen > paste SSH key you copied.
-4. Now go to [browse > repos > tututu... > SSH](https://code.cs130.org/admin/repos/tutututu-maxverstappen,general) and copy that command.
+4. Now go to [browse > repos > restful... > SSH](https://code.cs130.org/admin/repos/restful-webserver,general) and copy that command.
 
 **IMPORTANT**: Use the SSH command *with* hook. Otherwise, you won't be able to commit.
 
 ```sh
 cd ~/cs130
-git clone "ssh://USERNAME@code.cs130.org:29418/tutututu-maxverstappen"
-cd tutututu-maxverstappen
+git clone "ssh://USERNAME@code.cs130.org:29418/restful-webserver"
+cd restful-webserver
 ../tools/env/start.sh -u USERNAME -r
 ```
 Now attempt to pull:
@@ -253,7 +242,7 @@ Go back to [SSH keys](https://code.cs130.org/settings/#SSHKeys) in the Gerrit we
 - [Rewrap](https://marketplace.visualstudio.com/items/?itemName=stkb.rewrap)
   - `ctrl+q` for automatic line wrapping.
 - [Bookmarks](https://marketplace.visualstudio.com/items/?itemName=alefragnani.Bookmarks)
-  - `ctrl+k` to add bookmarks, `ctrl+l` to go to the next one.
+  - `alt+ctrl+k` to add bookmarks, `alt+ctrl+l` to go to the next one.
 - [Black Formatter](https://marketplace.visualstudio.com/items/?itemName=ms-python.black-formatter)
   -  good formatter for Python code
 - [Git Graph](https://marketplace.visualstudio.com/items/?itemName=mhutchie.git-graph)
