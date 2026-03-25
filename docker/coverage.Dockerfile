@@ -1,6 +1,6 @@
 # coverage.Dockerfile
-# Define builder stage
-FROM restful-webserver:base AS builder
+# Define build stage
+FROM restful-webserver:base AS build
 
 # Copy project source
 COPY . /usr/src/project
