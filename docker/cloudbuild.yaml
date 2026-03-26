@@ -1,3 +1,5 @@
+options:
+  defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
 steps:
   # Pull cached base image if it exists
   - name: "gcr.io/cloud-builders/docker"
