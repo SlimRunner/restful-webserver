@@ -1,4 +1,5 @@
 - [Development](#development)
+  - [Setup GCP](#setup-gcp)
   - [C++ Environment](#c-environment)
     - [Setup IDE](#setup-ide)
     - [Devel Environment](#devel-environment)
@@ -21,6 +22,22 @@
 # Development
 
 > TODO: remove or migrate the `tools/env/start.sh` away from `code.cs130.org`
+
+## Setup GCP
+1. create project with name `restful-webserver`
+2. set billing (if not done before)
+3. go to `IAM & Admin > IAM` and add grants to members (if needed)
+4. setup `gcloud init` locally for convenience
+5. go to https://console.cloud.google.com/cloud-build/builds
+   1. enabled cloud-builds
+   2. run `gcloud builds submit --config .\docker\cloudbuild.yaml .`
+   3. if it succeeds move on
+6. Enable VM instances and create one instance
+   1. add additional persistent storage
+   2. reserve static IP
+   3. NO backups
+   4. add `google-logging-enabled: true` under metadata
+   5. add container (technically deprecated)
 
 ## C++ Environment
 
