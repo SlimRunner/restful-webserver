@@ -1,0 +1,22 @@
+{
+  "name": "C++ Dev Container",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": ".."
+  },
+  "remoteUser": "vscode",
+  "workspaceFolder": "/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+  "postCreateCommand": "mkdir -p build && cd build && cmake ..",
+  "settings": {
+    "terminal.integrated.shell.linux": "/bin/bash"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools",
+        "llvm-vs-code-extensions.vscode-clangd"
+      ]
+    }
+  }
+}
