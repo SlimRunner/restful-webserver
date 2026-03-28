@@ -9,8 +9,15 @@ usage() {
   echo "  --build         Build the release version only."
   echo "  --int           Update build with cmake but run integration test only."
   echo "  --cover         Build the coverage version only."
+  echo "  --makelist      Run CMake only"
   echo "  -h, --help      Display this help message."
   exit 1
+}
+
+function run_cmake_only() {
+  mkdir -p build
+  cd build
+  cmake ..
 }
 
 function run_integration_only() {
@@ -44,6 +51,7 @@ ALL=false
 BUILD_ONLY=false
 COVER_ONLY=false
 INT_TEST_ONLY=false
+MAKE_ONLY=false
 
 while [[ "$#" -gt 0 ]]; do
   case $1 in
@@ -51,6 +59,7 @@ while [[ "$#" -gt 0 ]]; do
     --build) BUILD_ONLY=true;;
     --int) INT_TEST_ONLY=true;;
     --cover) COVER_ONLY=true;;
+    --makelist) MAKE_ONLY=true;;
     -h|--help) usage;;
     *) echo "Unknown option: $1"; usage;;
   esac
@@ -61,6 +70,8 @@ if $CLEAN; then
   rm -rf build build_coverage
 elif $BUILD_ONLY; then
   build_release
+elif $MAKE_ONLY; then
+  run_cmake_only
 elif $COVER_ONLY; then
   build_coverage
 elif $INT_TEST_ONLY; then
