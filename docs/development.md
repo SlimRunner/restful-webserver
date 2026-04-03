@@ -42,31 +42,14 @@
 ## C++ Environment
 
 ### Setup IDE
-To keep code clean, do the following to set up auto-formatting:
+This project is setup for VS Code. Once you cloned open the command palette and run `Dev Containers: Reopen in Container`
 
-First, add the following to your `.vscode/settings.json`:
-```jsonc
-{
-  "[cpp]": {
-    "editor.tabSize": 4,
-    "editor.insertSpaces": true
-  },
-  "C_Cpp.clang_format_style": "file", // Use .clang-format if available
-  "C_Cpp.clang_format_fallbackStyle": "Google", // Or LLVM, Mozilla, etc.
-  "editor.formatOnSave": true
-}
-```
-Append this to whatever is in there already. This file is not tracked because it contains noise that the C++ extension adds. With this in place, the `.clang-format` file will set up all the rules we want for formatting. Lastly, this makes it so that the format is applied every time you save, making it easier to keep a consistent code style.
-
-### Devel Environment
-This project uses a Docker container to run the project. To set that up, run:
+Once inside run
 ```sh
- ../tools/env/start.sh -u ${User_Name} -r
+./dev --makelist
 ```
 
-Optional: -r, flag to mirror the boost, gtest, and gmock libraries into the repo to get intellisense and autocomplete
-
-Assuming that you have your devel tools one directory up.
+Once you load C++ file you might need to restart the clang language server.
 
 ### Run CMake
 You can run this manually or use our script `./run_build.sh` to configure everything. The command has the following modes:
@@ -75,6 +58,7 @@ You can run this manually or use our script `./run_build.sh` to configure everyt
 - `--build`: Builds the release version only.
 - `--int`: Updates the build with CMake and runs integration tests only.
 - `--cover`: Builds the coverage version only.
+- `--makelist`: Generates building tools with CMakeLists only
 - `-h`, `--help`: Get this same help in the terminal.
 
 You can still manually `cd` into the desired build directory and run the appropriate `make` commands to test or execute the build.
@@ -125,135 +109,6 @@ Another thing to note is that when you run this, the server will take over your 
 docker stop my_run
 ```
 It should close immediately.
-
-## Setup Local Development
-
-### Create VM
-1. Download the current Ubuntu LTS from [their website](https://ubuntu.com/download/desktop).
-2. [Download and install VirtualBox](https://www.virtualbox.org/wiki/Downloads). Use the platform packages.
-3. Once in VirtualBox, click `New`.
-4. Select the ISO you downloaded in step one.
-   1. Leave "skip unattended install" unchecked.
-   2. 8 GB of memory is recommended.
-   3. 35 GB of storage is recommended.
-   4. Use half of your cores (recommended).
-   5. Let the installation proceed.
-5. Once it is done, **do not sign in**. Shut down instead.
-6. Go to your VM in VirtualBox, and in settings, navigate to display settings and increase the memory to at least 128 MB.
-7. Log in to your VM.
-
-> TIP: Name your user the same as your UCLA user so that you can use `$USER` later in the terminal.
-
-### Configure VM
-
-#### The Essentials
-```sh
-sudo apt update
-sudo apt upgrade
-# installing essentials
-sudo apt update && sudo apt install -y build-essential curl wget git python3 python3-pip openjdk-17-jdk golang-go nodejs npm docker.io unzip zip bash-completion zsh
-```
-#### Kubernetes
-Not sure if needed, but just in case (and GCloud has it).
-
-[Link to reference](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/#install-using-native-package-management)
-```sh
-# installing Kubernetes
-# this comes straight from their apt instructions
-sudo apt-get update
-# apt-transport-https may be a dummy package; if so, you can skip that package
-sudo apt-get install -y apt-transport-https ca-certificates curl gnupg
-
-# If the folder `/etc/apt/keyrings` does not exist, it should be created before the curl command, read the note below.
-# sudo mkdir -p -m 755 /etc/apt/keyrings
-curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.33/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-sudo chmod 644 /etc/apt/keyrings/kubernetes-apt-keyring.gpg # allow unprivileged APT programs to read this keyring
-
-# This overwrites any existing configuration in /etc/apt/sources.list.d/kubernetes.list
-echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.33/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
-sudo chmod 644 /etc/apt/sources.list.d/kubernetes.list   # helps tools such as command-not-found to work correctly
-
-# finally
-sudo apt-get update
-sudo apt-get install -y kubectl
-```
-#### Install GCloud
-So that you can SSH from VS Code locally.
-
-[Link to reference](https://cloud.google.com/sdk/docs/install#linux)
-```sh
-curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-x86_64.tar.gz
-tar -xf google-cloud-cli-linux-x86_64.tar.gz
-# you will be asked to sign into your UCLA account in Firefox
-# say yes when asked to add to PATH
-# if asked about compute zone answer no (or yes if you want) it just sets default
-./google-cloud-sdk/install.sh
-```
-Restart the terminal:
-```sh
-gcloud init
-```
-If it does not work, you did not set up the PATH.
-
-Before finishing run this command
-```sh
-docker run hello-world
-```
-If that fails (which likely will), then you have to add yourself to the docker group:
-```sh
-sudo usermod -aG docker $USER
-```
-[Visit this link](https://stackoverflow.com/questions/48957195/how-to-fix-docker-permission-denied) if you need further help with docker
-
-### Setup SSH
-```sh
-sudo apt update
-sudo apt install -y openssh-server
-sudo systemctl enable ssh # so that it runs automatically on startup
-sudo systemctl start ssh
-```
-You can check if it worked with:
-```sh
-sudo systemctl status ssh
-```
-
-### Setup Devel (OUTDATED STEP)
-Open the terminal:
-```sh
-cd ~
-mkdir cs130
-cd cs130
-git clone https://code.cs130.org/tools
-cd ..
-ssh-keygen -t ed25519
-gnome-text-editor ~/.ssh/id_ed25519.pub
-# copy the contents
-```
-Now do the following:
-1. Open Firefox.
-2. Go to [code.cs130.org](https://code.cs130.org/).
-   1. You should be signed in because of the earlier step in GCloud.
-3. Go to settings > keygen > paste SSH key you copied.
-4. Now go to [browse > repos > restful... > SSH](https://code.cs130.org/admin/repos/restful-webserver,general) and copy that command.
-
-**IMPORTANT**: Use the SSH command *with* hook. Otherwise, you won't be able to commit.
-
-```sh
-cd ~/cs130
-git clone "ssh://USERNAME@code.cs130.org:29418/restful-webserver"
-cd restful-webserver
-../tools/env/start.sh -u USERNAME -r
-```
-Now attempt to pull:
-```sh
-git pull
-```
-It should fail, but it will ask you to add a new key for Gerrit. Now:
-```sh
-cat ~/.ssh/id_ed25519.pub
-# copy the key
-```
-Go back to [SSH keys](https://code.cs130.org/settings/#SSHKeys) in the Gerrit website, and add that key. Attempt to pull again. Now it should work.
 
 ## Recommended VS Code Extensions
 - [Rewrap](https://marketplace.visualstudio.com/items/?itemName=stkb.rewrap)

@@ -1,0 +1,8 @@
+Diagnostics:
+  Suppress: [expr_not_cce]
+
+Index:
+  Background: Build
+
+CompileFlags:
+  Add: [-fbracket-depth=1024] # Helps with Boost's deep template nesting
