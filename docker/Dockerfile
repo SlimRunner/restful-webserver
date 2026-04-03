@@ -42,7 +42,7 @@ COPY --from=build /usr/src/project/static ./static
 # this is purely for metadata, does not actually open a port, but it is
 # good to keep updated for people reading this file
 EXPOSE 8081
-EXPOSE 80
+EXPOSE 8080
 
 # use the webserver as entry point
 ENTRYPOINT ["./webserver"]
